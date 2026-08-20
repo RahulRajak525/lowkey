@@ -26,5 +26,5 @@ lastMessageAt :{
 }
 },{timestamps:true})
 
-export const User = mongoose.model("Chat",ChatSchema)
+export const Chat = mongoose.model("Chat",ChatSchema)
 
