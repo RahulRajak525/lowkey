@@ -1,9 +1,9 @@
 import { Router } from "express";
+import { protectRoute } from "../middleware/auth";
+import { getMessages } from "../controllers/messageController";
 
 const router = Router()
 
-router.get("/message", (req, res)=>{
-    res.json({status:"ok", message:"Running for message"})
-})
 
+router.get("/chat/:chatId",protectRoute,getMessages)
 export default router
