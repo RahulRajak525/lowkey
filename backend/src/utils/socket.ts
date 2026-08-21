@@ -6,19 +6,17 @@ import { Message } from "../models/Message";
 import { Chat } from "../models/Chat";
 import { User } from "../models/User";
 
-interface SocketWithUserId extends Socket {
-  userId: string;
-}
+
 
 // store online users in memory : userId -> socketId
 export const onlineUsers: Map<string, string> = new Map();
 
 export const initializeSocket = (httpServer: HttpServer) => {
   const allowedOrigins = [
-    "http://localhost:8081", // Expo mobile
-    "http://localhost:5173", // Vite web dev
-    process.env.FRONTEND_URL as string, // production
-  ];
+    "http://localhost:8081",   // Expo mobile
+    "http://localhost:5173",   // Vite web dev
+    process.env.FRONTEND_URL  // production
+  ].filter(Boolean) as string[];
   const io = new SocketServer(httpServer, { cors: { origin: allowedOrigins } });
 
   io.use(async (socket, next) => {
@@ -32,7 +30,7 @@ export const initializeSocket = (httpServer: HttpServer) => {
       const clerkId = session.sub;
       const user = await User.findOne({ clerkId });
       if (!user) return next(new Error("User not found"));
-      (socket as SocketWithUserId).userId = user._id.toString();
+      socket.data.userId = user._id.toString();
       next();
     } catch (error: any) {
       next(new Error(error));
@@ -40,7 +38,7 @@ export const initializeSocket = (httpServer: HttpServer) => {
   });
 
   io.on("connection", (socket) => {
-    const userId = (socket as SocketWithUserId).userId;
+    const userId = socket.data.userId;
     // sent list of currently online users to the newly connected client
 
     socket.emit("online-users", { userIds: Array.from(onlineUsers.keys()) });
@@ -53,12 +51,12 @@ export const initializeSocket = (httpServer: HttpServer) => {
 
     socket.broadcast.emit("user-online", { userId: userId });
 
-    socket.join(`user: ${userId}`);
+    socket.join(`user:${userId}`);
     socket.on("join-chat", (chatId: string) => {
-      socket.join(`chat: ${chatId}`);
+      socket.join(`chat:${chatId}`);
     });
     socket.on("leave-chat", (chatId: string) => {
-      socket.leave(`chat: ${chatId}`);
+      socket.leave(`chat:${chatId}`);
     });
 
     // handle sending messages
@@ -88,7 +86,7 @@ export const initializeSocket = (httpServer: HttpServer) => {
           chat.lastMessageAt = new Date();
           await chat.save();
 
-          await message.populate("sender", "name email avatar");
+          await message.populate("sender", "name avatar");
           //emit to chat room (for users inside the chat)
 
           io.to(`chat:${chatId}`).emit("new-message", message);

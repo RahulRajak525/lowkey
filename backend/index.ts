@@ -10,12 +10,12 @@ const httpServer = createServer(app)
 initializeSocket(httpServer)
 
 connectDB().then(()=>{
-    app.listen(PORT, ()=>{
+    httpServer.listen(PORT, ()=>{
     console.log('Server is up and running on Port:', PORT)
 
 })
 }).catch((err)=>{
-    console.log("Failed to start server:", err)
+    console.error("Failed to start server:", err)
     process.exit(1)
 })
 
