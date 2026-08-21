@@ -6,6 +6,18 @@ import userRoutes from "./routes/userRoute"
 const app = express()
 import { clerkMiddleware } from '@clerk/express'
 import { errorHandler } from "./middleware/errorHandler"
+import cors from "cors"
+import path from "path"
+import fs from "fs"
+
+// browsers enforce CORS, so the deployed web origin must be listed explicitly
+const allowedOrigins = [
+    "http://localhost:5173",  // Vite web dev
+    "http://localhost:8081",  // Expo mobile
+    process.env.FRONTEND_URL, // production web
+].filter(Boolean) as string[]
+
+app.use(cors({ origin: allowedOrigins, credentials: true }))
 
 app.use(express.json()) // parses incoming JSON request bodies and makes them available as req. body in your route handlers.
 
@@ -25,4 +37,15 @@ app.use("/api/users", userRoutes)
 
 app.use(errorHandler)
 
+// serve frontend in production, but only when the build is actually next to us
+// (single-service deploy). When the web app is deployed separately, this is skipped.
+const webDist = path.join(__dirname, "../../web/dist")
+
+if(process.env.NODE_ENV==="production" && fs.existsSync(webDist)){
+    app.use(express.static(webDist))
+
+    app.get("/{*any}",(_, res)=>{
+        res.sendFile(path.join(webDist,"index.html"))
+    })
+}
 export default app
