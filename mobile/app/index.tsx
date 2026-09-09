@@ -1,20 +1,17 @@
-import { Text, View, StyleSheet } from "react-native";
+import { useAuth } from '@clerk/expo'
+import { Redirect } from 'expo-router'
+import { ActivityIndicator, View } from 'react-native'
 
 export default function Index() {
-  return (
-    <View className="flex-1 items-center justify-center bg-white">
-      <Text className="text-xl font-bold text-blue-500">
-        Welcome to Nativewind!
-      </Text>
-    </View>
-  );
+  const { isLoaded, isSignedIn } = useAuth()
+
+  if (!isLoaded) {
+    return (
+      <View className="flex-1 items-center justify-center bg-[#0D0D0F]">
+        <ActivityIndicator size="large" color="#F4A261" />
+      </View>
+    )
+  }
+
+  return <Redirect href={isSignedIn ? '/(tabs)' : '/(auth)'} />
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-});
-
