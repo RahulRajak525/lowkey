@@ -30,7 +30,7 @@ export async function authCallback(req:Request, res:Response,next:NextFunction){
         const clerkUser = await clerkClient.users.getUser(clerkId)
         user = await User.create({
             clerkId ,
-            name:clerkUser.firstName ? `${clerkUser.firstName} ${clerkUser.lastName} || ""`.trim():clerkUser.emailAddresses[0]?.emailAddress.split("@")[0],email:clerkUser.emailAddresses[0]?.emailAddress,avatar:clerkUser.imageUrl
+            name:clerkUser.firstName ? `${clerkUser.firstName} ${clerkUser.lastName || ""}`.trim():clerkUser.emailAddresses[0]?.emailAddress.split("@")[0],email:clerkUser.emailAddresses[0]?.emailAddress,avatar:clerkUser.imageUrl
         })
     }
 
