@@ -1,64 +1,83 @@
-
-import  axios  from "axios";
-import {useAuth} from "@clerk/expo";
-import { useEffect, useState } from "react";
-import * as Sentry from '@sentry/react-native';
-
+import axios, {
+  AxiosHeaders,
+  type AxiosError,
+  type AxiosRequestConfig,
+  type RawAxiosHeaders,
+} from "axios";
+import { useAuth } from "@clerk/expo";
+import { useCallback } from "react";
+import * as Sentry from "@sentry/react-native";
 
 // the API service, not the static web site (whisper-app-qc0m) — that one
-// answers POSTs with an empty 200 via its SPA rewrite
+// answers POSTs with an empty 200 via its SPA rewrite.
+// Every backend route is mounted under /api, so it lives in the baseURL and
+// callers pass paths like "/auth/callback".
 const API_URL = "https://whisper-web-tjgh.onrender.com";
 
 const api = axios.create({
-  baseURL: API_URL,
+  baseURL: `${API_URL}/api`,
   headers: {
     "Content-Type": "application/json",
   },
-//   withCredentials: true,
+  //   withCredentials: true,
 });
 
+// `api` is a singleton, so this is registered once at module load rather than
+// per mount — inside an effect, every extra useApi() consumer added another
+// copy and one failure was reported to Sentry once per mounted consumer.
+api.interceptors.response.use(
+  (response) => response,
+  (error: AxiosError) => {
+    // aborted requests (unmount, react-query cancellation) aren't failures
+    if (axios.isCancel(error)) return Promise.reject(error);
+
+    const endpoint = error.config?.url;
+    const method = error.config?.method;
+
+    if (error.response) {
+      Sentry.logger.error(
+        Sentry.logger.fmt`API Error: ${method?.toUpperCase()} ${endpoint}`,
+        {
+          status: error.response.status,
+          endpoint,
+          method,
+        }
+      );
+    } else if (error.request) {
+      Sentry.logger.warn("API Request failed : No response received", {
+        endpoint,
+        method,
+      });
+    }
+
+    return Promise.reject(error);
+  }
+);
+
+// Narrower than AxiosRequestConfig, whose `headers` also allows the
+// method-keyed defaults shape that AxiosHeaders cannot be built from.
+type RequestConfig = Omit<AxiosRequestConfig, "headers"> & {
+  headers?: RawAxiosHeaders;
+};
 
 export const useApi = () => {
   const { getToken } = useAuth();
-  useEffect(() => {
-    const requestInterceptor = api.interceptors.request.use(
-      async (config) => {
-        const token = await getToken(); 
-        if (token) {
-          config.headers.Authorization = `Bearer ${token}`;
-        }
 
-        return config;
-      }
-    );
+  // The token is attached per call instead of by a request interceptor: an
+  // interceptor has to read `getToken` out of module-level mutable state, which
+  // is either a write during render (unsafe under the React Compiler this app
+  // enables) or a write in an effect (too late for a request fired from a
+  // child's mount effect, which then goes out unauthenticated).
+  const apiWithAuth = useCallback(
+    async <T,>(config: RequestConfig) => {
+      const token = await getToken();
+      const headers = new AxiosHeaders(config.headers);
+      if (token) headers.set("Authorization", `Bearer ${token}`);
 
-    const responseInterceptor = api.interceptors.response.use(
-      (response) => response,
-      (error) => {
-        if(error.response){
-             Sentry.logger.error(Sentry.logger.fmt`API Error: ${error.config?.method?.toUpperCase()} ${error.config?.url}`,{
-                status: error.response.status,
-                endpoint: error.config?.url,
-                method: error.config?.method,
-             }
-            )
-        }else if(error.request){
-            Sentry.logger.warn("API Request failed : No response received",{
-                endpoint: error.config?.url,
-                method: error.config?.method,
-            })
-        }
+      return api<T>({ ...config, headers });
+    },
+    [getToken]
+  );
 
-        return Promise.reject(error);
-      }
-    );
-
-    // Cleanup function to remove the interceptor when the component unmounts
-   return () => {
-      api.interceptors.request.eject(requestInterceptor);
-      api.interceptors.response.eject(responseInterceptor);
-    }
-  }, [getToken]);
-
-  return api;
+  return { apiWithAuth };
 };
