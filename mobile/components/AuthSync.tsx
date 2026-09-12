@@ -1,7 +1,7 @@
 import {useAuthCallback} from "../hooks/useAuth";
 import {useEffect, useRef} from "react";
 import {useAuth , useUser} from "@clerk/expo";
-
+import * as Sentry from '@sentry/react-native';
  const  AuthSync=()=> {
   const {isSignedIn} = useAuth()
   const {user} = useUser()
@@ -13,9 +13,17 @@ useEffect(()=>{
       syncUser(undefined ,{
         onSuccess:(data)=>{
           console.log("✅ User synced with backend successfully:", data.name)
+          Sentry.logger.info(Sentry.logger.fmt`User synced with backend successfully :${data.name}`,{
+            userId: user.id,
+            userName: data.name,
+          })
         },
         onError:(error)=>{
           hasSynced.current = false // let the next sign-in / user update retry a failed sync
+          Sentry.logger.error(Sentry.logger.fmt`Error syncing user :${error.message}`,{
+            userId: user.id,
+            userName: user.firstName + " " + user.lastName,
+          })
           console.error("❌ Error syncing user:", error.message)
         }
       })
