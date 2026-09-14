@@ -11,10 +11,10 @@ export async function getChats(req:AuthRequest, res:Response, next:NextFunction)
        .populate("lastMessage").sort({lastMessageAt:-1})
        
        const formattedChats = chats.map(chat=>{
-         const otherParticipants = chat.participants.find(p=>p._id.toString() !==userId)
+         const otherParticipant = chat.participants.find(p=>p._id.toString() !==userId)
          return {
             _id:chat._id,
-            participants : otherParticipants ?? null,
+            participant : otherParticipant ?? null,
             lastMessage : chat.lastMessage,
             lastMessageAt : chat.lastMessageAt,
             createdAt : chat.createdAt
@@ -62,7 +62,7 @@ export async function getOrCreateChat(req:AuthRequest, res:Response, next:NextFu
        const otherParticipant = chat.participants.find(p=>p._id.toString() !==userId)
        res.json({
          _id:chat._id,
-         participants: otherParticipant ?? null,
+         participant: otherParticipant ?? null,
          lastMessage : chat.lastMessage,
          lastMessageAt : chat.lastMessageAt,
          createdAt: chat.createdAt
