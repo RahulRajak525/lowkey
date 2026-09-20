@@ -1,86 +1,122 @@
-import { useAuth, useUser } from '@clerk/expo'
-import { Image } from 'expo-image'
-import { useRouter } from 'expo-router'
-import { useState } from 'react'
-import {
-  ActivityIndicator,
-  Alert,
-  Pressable,
-  ScrollView,
-  Text,
-  View,
-} from 'react-native'
-import { SafeAreaView } from 'react-native-safe-area-context'
+import { useAuth, useUser } from "@clerk/expo";
+import { View, Text, ScrollView, Pressable } from "react-native";
+import { Image } from "expo-image";
+import { Ionicons } from "@expo/vector-icons";
 
-export default function ProfileTab() {
-  const { user, isLoaded } = useUser()
-  const { signOut } = useAuth()
-  const router = useRouter()
-  const [signingOut, setSigningOut] = useState(false)
+const MENU_SECTIONS = [
+  {
+    title: "Account",
+    items: [
+      { icon: "person-outline", label: "Edit Profile", color: "#F4A261" },
+      { icon: "shield-checkmark-outline", label: "Privacy & Security", color: "#10B981" },
+      { icon: "notifications-outline", label: "Notifications", value: "On", color: "#8B5CF6" },
+    ],
+  },
+  {
+    title: "Preferences",
+    items: [
+      { icon: "moon-outline", label: "Dark Mode", value: "On", color: "#6366F1" },
+      { icon: "language-outline", label: "Language", value: "English", color: "#EC4899" },
+      { icon: "cloud-outline", label: "Data & Storage", value: "1.2 GB", color: "#14B8A6" },
+    ],
+  },
+  {
+    title: "Support",
+    items: [
+      { icon: "help-circle-outline", label: "Help Center", color: "#F59E0B" },
+      { icon: "chatbubble-outline", label: "Contact Us", color: "#3B82F6" },
+      { icon: "star-outline", label: "Rate the App", color: "#F4A261" },
+    ],
+  },
+];
 
-  const onSignOut = async () => {
-    if (signingOut) return
-    setSigningOut(true)
-    try {
-      await signOut()
-      router.replace('/(auth)')
-    } catch (error) {
-      setSigningOut(false)
-      Alert.alert(
-        'Could not sign out',
-        error instanceof Error ? error.message : String(error),
-      )
-    }
-  }
-
-  if (!isLoaded) {
-    return (
-      <View className="flex-1 items-center justify-center bg-[#0D0D0F]">
-        <ActivityIndicator size="large" color="#F4A261" />
-      </View>
-    )
-  }
-
-  const displayName =
-    [user?.firstName, user?.lastName].filter(Boolean).join(' ') || 'Your account'
-  const email = user?.primaryEmailAddress?.emailAddress ?? ''
+const ProfileTab = () => {
+  const { signOut } = useAuth();
+  const { user } = useUser();
 
   return (
-    <SafeAreaView className="flex-1 bg-[#0D0D0F]" edges={['top']}>
-      <ScrollView contentContainerStyle={{ padding: 24 }}>
-        <Text className="mb-8 text-3xl font-bold text-white">Profile</Text>
-
-        <View className="mb-8 items-center gap-3">
-          {user?.imageUrl ? (
-            <Image
-              source={{ uri: user.imageUrl }}
-              style={{ width: 88, height: 88, borderRadius: 44 }}
-              contentFit="cover"
-            />
-          ) : (
-            <View className="h-[88px] w-[88px] items-center justify-center rounded-full bg-[#2D2D30]">
-              <Text className="text-3xl font-bold text-[#F4A261]">
-                {(displayName[0] ?? '?').toUpperCase()}
-              </Text>
+    <ScrollView
+      className="bg-surface-dark"
+      contentInsetAdjustmentBehavior="automatic"
+      showsVerticalScrollIndicator={false}
+      // indicatorStyle="white"
+      contentContainerStyle={{ paddingBottom: 40 }}
+    >
+      {/* HEADER  */}
+      <View className="relative">
+        <View className="items-center mt-10">
+          <View className="relative">
+            <View className="rounded-full border-2 border-primary">
+              <Image
+                source={user?.imageUrl}
+                style={{ width: 100, height: 100, borderRadius: 999 }}
+              />
             </View>
-          )}
 
-          <Text className="text-xl font-semibold text-white">{displayName}</Text>
-          {email ? <Text className="text-base text-[#A0A0A5]">{email}</Text> : null}
+            <Pressable className="absolute bottom-1 right-1 w-8 h-8 bg-primary rounded-full items-center justify-center border-2 border-surface-dark">
+              <Ionicons name="camera" size={16} color="#0D0D0F" />
+            </Pressable>
+          </View>
+
+          {/* NAME & EMAIL */}
+          <Text className="text-2xl font-bold text-foreground mt-4">
+            {user?.firstName} {user?.lastName}
+          </Text>
+
+          <Text className="text-muted-foreground mt-1">
+            {user?.emailAddresses[0]?.emailAddress}
+          </Text>
+
+          <View className="flex-row items-center mt-3 bg-green-500/20 px-3 py-1.5 rounded-full">
+            <View className="w-2 h-2 bg-green-500 rounded-full mr-2" />
+            <Text className="text-green-500 text-sm font-medium">Online</Text>
+          </View>
         </View>
+      </View>
 
-        <Pressable
-          className="items-center rounded-xl border border-[#E76F51] py-4 active:opacity-80"
-          onPress={onSignOut}
-          disabled={signingOut}
-        >
-          {signingOut ? (
-            <ActivityIndicator color="#E76F51" />
-          ) : (
-            <Text className="text-base font-semibold text-[#E76F51]">Sign out</Text>
-          )}
-        </Pressable>
-      </ScrollView>
-    </SafeAreaView>
-  )
-}
+      {/* MENU SECTIONS */}
+      {MENU_SECTIONS.map((section) => (
+        <View key={section.title} className="mt-6 mx-5">
+          <Text className="text-subtle-foreground text-xs font-semibold uppercase tracking-wider mb-2 ml-1">
+            {section.title}
+          </Text>
+          <View className="bg-surface-card rounded-2xl overflow-hidden">
+            {section.items.map((item, index) => (
+              <Pressable
+                key={item.label}
+                className={`flex-row items-center px-4 py-3.5 active:bg-surface-light ${
+                  index < section.items.length - 1 ? "border-b border-surface-light" : ""
+                }`}
+              >
+                <View
+                  className="w-9 h-9 rounded-xl items-center justify-center"
+                  style={{ backgroundColor: `${item.color}20` }}
+                >
+                  <Ionicons name={item.icon as any} size={20} color={item.color} />
+                </View>
+                <Text className="flex-1 ml-3 text-foreground font-medium">{item.label}</Text>
+                {item.value && (
+                  <Text className="text-subtle-foreground text-sm mr-1">{item.value}</Text>
+                )}
+                <Ionicons name="chevron-forward" size={18} color="#6B6B70" />
+              </Pressable>
+            ))}
+          </View>
+        </View>
+      ))}
+
+      {/* Logout Button */}
+      <Pressable
+        className="mx-5 mt-8 bg-red-500/10 rounded-2xl py-4 items-center active:opacity-70 border border-red-500/20"
+        onPress={() => signOut()}
+      >
+        <View className="flex-row items-center">
+          <Ionicons name="log-out-outline" size={20} color="#EF4444" />
+          <Text className="ml-2 text-red-500 font-semibold">Log Out</Text>
+        </View>
+      </Pressable>
+    </ScrollView>
+  );
+};
+
+export default ProfileTab;
