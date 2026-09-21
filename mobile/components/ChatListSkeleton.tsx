@@ -91,10 +91,14 @@ const SkeletonRow = ({
  * Placeholder for the chat list: pulsing conversation rows topped off with the
  * typing bubble, so a cold load still feels like a chat screen.
  */
-export const ChatListSkeleton = () => (
+export const ChatListSkeleton = ({
+  label = 'Loading your conversations',
+}: {
+  label?: string
+}) => (
   <View className="flex-1">
     <View className="mb-2">
-      <TypingBubble label="Loading your conversations" />
+      <TypingBubble label={label} />
     </View>
     {ROWS.map((widths, index) => (
       <SkeletonRow key={index} index={index} widths={widths} />

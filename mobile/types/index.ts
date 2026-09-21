@@ -5,10 +5,15 @@ export interface User {
   avatar: string;
 }
 
+/**
+ * `email` is optional because the two endpoints that populate a sender do not
+ * agree: the REST message list selects "name email avatar", while the socket's
+ * `new-message` payload selects only "name avatar".
+ */
 export interface MessageSender {
   _id: string;
   name: string;
-  email: string;
+  email?: string;
   avatar: string;
 }
 
@@ -19,7 +24,16 @@ export interface Message {
   text: string;
   createdAt: string;
   updatedAt: string;
+  /**
+   * Set on the local echo of a message that has been emitted but not yet
+   * confirmed by the server. Server messages never carry it.
+   */
+  pending?: boolean;
 }
+
+/** Narrows the populated sender the message list renders from. */
+export const senderOf = (message: Message): MessageSender | null =>
+  typeof message.sender === "string" ? null : message.sender;
 
 export interface ChatLastMessage {
   _id: string;

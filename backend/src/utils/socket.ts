@@ -105,11 +105,13 @@ export const initializeSocket = (httpServer: HttpServer) => {
   socket.on("typing", async (data)=>{})
   socket.on("disconnect",()=>{
     onlineUsers.delete(userId)
+
+    // Notify Others. This has to stay inside the disconnect handler: at the
+    // connection level it ran immediately after "user-online", so every client
+    // marked the user who had just connected as offline again.
+
+    socket.broadcast.emit("user-offline", {userId})
   })
-
-  // Notify Others
-
-  socket.broadcast.emit("user-offline", {userId})
 
 });
 

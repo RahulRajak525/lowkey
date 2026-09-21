@@ -4,6 +4,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ClerkProvider } from '@clerk/expo';
 import { tokenCache } from '@clerk/expo/token-cache'
 import AuthSync from "../components/AuthSync";
+import SocketSync from "../components/SocketSync";
 import { StatusBar } from "expo-status-bar";
 import * as Sentry from '@sentry/react-native';
 
@@ -44,11 +45,16 @@ export default Sentry.wrap(function RootLayout() {
     <ClerkProvider publishableKey={publishableKey} tokenCache={tokenCache}>
     <QueryClientProvider client={queryClient}>
       <AuthSync />
+      <SocketSync />
       <StatusBar style="light"/>
       <Stack screenOptions={{headerShown:false, contentStyle:{backgroundColor:'#0D0D0F'}}}>
         <Stack.Screen name="index" options={{ animation: "fade" }}/>
         <Stack.Screen name="(auth)" options={{ animation: "fade" }} />
         <Stack.Screen name="(tabs)" options={{ animation: "fade" }}/>
+        <Stack.Screen
+          name="new-chat"
+          options={{ presentation: "modal", animation: "slide_from_bottom", gestureEnabled: true }}
+        />
       </Stack>
     </QueryClientProvider>
     </ClerkProvider>

@@ -1,15 +1,19 @@
 import { useSyncExternalStore } from "react";
+import { io, type Socket } from "socket.io-client";
+import { API_URL } from "@/lib/axios";
+import * as Sentry from "@sentry/react-native";
 
 /**
  * Presence state for the chat list: who is online, who is typing where, and
  * which chats have unread messages.
  *
- * This is the state container only — there is no networking in here yet. The
- * realtime transport (socket.io or otherwise) is expected to call the
- * `socketStore.*` setters below as events arrive, so swapping this file for a
- * socket-backed store later needs no changes in the components that read it.
+ * The store is transport-agnostic: the socket.io client at the bottom of this
+ * file is what calls the `socketStore.*` setters as events arrive, so the
+ * components reading this state never touch the connection itself.
  */
 export type SocketState = {
+  /** whether this device currently has a live connection */
+  isConnected: boolean;
   /** user ids currently connected */
   onlineUsers: Set<string>;
   /** chat id -> id of the participant typing in it */
@@ -19,6 +23,7 @@ export type SocketState = {
 };
 
 let state: SocketState = {
+  isConnected: false,
   onlineUsers: new Set(),
   typingUsers: new Map(),
   unreadChats: new Set(),
@@ -45,6 +50,11 @@ const setState = (patch: Partial<SocketState>) => {
 
 export const socketStore = {
   getState: getSnapshot,
+
+  setConnected(isConnected: boolean) {
+    if (state.isConnected === isConnected) return;
+    setState({ isConnected });
+  },
 
   /** Replace the whole presence list, e.g. from the initial handshake. */
   setOnlineUsers(userIds: Iterable<string>) {
@@ -76,6 +86,7 @@ export const socketStore = {
   /** Drop all presence state, e.g. on sign-out. */
   reset() {
     setState({
+      isConnected: false,
       onlineUsers: new Set(),
       typingUsers: new Map(),
       unreadChats: new Set(),
@@ -85,3 +96,89 @@ export const socketStore = {
 
 export const useSocketStore = () =>
   useSyncExternalStore(subscribe, getSnapshot, getSnapshot);
+
+
+/* ------------------------------------------------------------------------- *
+ * Transport
+ * ------------------------------------------------------------------------- */
+
+let socket: Socket | null = null;
+
+/**
+ * The chat currently on screen. Incoming messages for it are read, not unread,
+ * and it is rejoined automatically after a reconnect.
+ */
+let activeChatId: string | null = null;
+
+/**
+ * Opens the connection, or returns the existing one. Safe to call on every
+ * render pass of the component that owns the connection.
+ */
+export const connectSocket = (getToken: () => Promise<string | null>) => {
+  if (socket) return socket;
+
+  socket = io(API_URL, {
+    // Clerk session tokens are short-lived, so `auth` is a callback rather than
+    // a captured value: socket.io runs it before every connection attempt, and
+    // a reconnect after the app was backgrounded would otherwise hand the
+    // server a token that expired while the phone was asleep.
+    auth: (cb) => {
+      getToken()
+        .then((token) => cb({ token }))
+        .catch(() => cb({}));
+    },
+    transports: ["websocket"],
+  });
+
+  socket.on("online-users", ({ userIds }: { userIds: string[] }) => {
+    socketStore.setOnlineUsers(userIds);
+  });
+  socket.on("user-online", ({ userId }: { userId: string }) => {
+    socketStore.setUserOnline(userId, true);
+  });
+  socket.on("user-offline", ({ userId }: { userId: string }) => {
+    socketStore.setUserOnline(userId, false);
+  });
+
+  // Rooms live on the server socket, so a reconnect starts with none of them.
+  socket.on("connect", () => {
+    socketStore.setConnected(true);
+    if (activeChatId) socket?.emit("join-chat", activeChatId);
+  });
+
+  socket.on("disconnect", () => {
+    socketStore.setConnected(false);
+  });
+
+  // Sending is socket-only, so a handshake that never succeeds leaves the
+  // composer inert. Without this it fails silently: socket.io retries forever
+  // and reports nothing.
+  socket.on("connect_error", (error) => {
+    socketStore.setConnected(false);
+    Sentry.logger.warn(Sentry.logger.fmt`Socket connect failed: ${error.message}`);
+  });
+
+  return socket;
+};
+
+export const getSocket = () => socket;
+
+export const disconnectSocket = () => {
+  socket?.disconnect();
+  socket = null;
+  activeChatId = null;
+  socketStore.reset();
+};
+
+export const getActiveChatId = () => activeChatId;
+
+/** Enter a chat room; pass `null` when leaving the screen. */
+export const setActiveChat = (chatId: string | null) => {
+  if (activeChatId === chatId) return;
+  if (activeChatId) socket?.emit("leave-chat", activeChatId);
+  activeChatId = chatId;
+  if (chatId) {
+    socket?.emit("join-chat", chatId);
+    socketStore.setChatUnread(chatId, false);
+  }
+};
