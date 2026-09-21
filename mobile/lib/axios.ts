@@ -12,7 +12,9 @@ import * as Sentry from "@sentry/react-native";
 // answers POSTs with an empty 200 via its SPA rewrite.
 // Every backend route is mounted under /api, so it lives in the baseURL and
 // callers pass paths like "/auth/callback".
-const API_URL = "https://whisper-web-tjgh.onrender.com";
+// exported so the socket client dials the same host (it connects at the
+// origin, not under /api).
+export const API_URL = "https://whisper-web-tjgh.onrender.com";
 
 const api = axios.create({
   baseURL: `${API_URL}/api`,
