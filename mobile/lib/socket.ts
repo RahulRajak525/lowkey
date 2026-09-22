@@ -105,6 +105,31 @@ export const useSocketStore = () =>
 let socket: Socket | null = null;
 
 /**
+ * How long a received "typing" claim stands without a refresh. Longer than the
+ * sender's idle timeout, so the normal stop event wins and this only fires when
+ * that event never arrives.
+ */
+const TYPING_EXPIRY_MS = 6000;
+
+/** chat id -> timer that clears a stale typing indicator */
+const typingTimers = new Map<string, ReturnType<typeof setTimeout>>();
+
+const clearTypingFor = (predicate: (chatId: string, typistId: string) => boolean) => {
+  for (const [chatId, typistId] of socketStore.getState().typingUsers) {
+    if (!predicate(chatId, typistId)) continue;
+    const timer = typingTimers.get(chatId);
+    if (timer) clearTimeout(timer);
+    typingTimers.delete(chatId);
+    socketStore.setTyping(chatId, null);
+  }
+};
+
+/** Tell the other participants whether this user is currently typing. */
+export const emitTyping = (chatId: string, isTyping: boolean) => {
+  socket?.emit("typing", { chatId, isTyping });
+};
+
+/**
  * The chat currently on screen. Incoming messages for it are read, not unread,
  * and it is rejoined automatically after a reconnect.
  */
@@ -144,7 +169,34 @@ export const connectSocket = (getToken: () => Promise<string | null>) => {
   });
   activeSocket.on("user-offline", ({ userId }: { userId: string }) => {
     socketStore.setUserOnline(userId, false);
+    // Someone who drops off mid-sentence never sends the closing `false`.
+    clearTypingFor((chatId, typistId) => typistId === userId);
   });
+
+  activeSocket.on(
+    "user-typing",
+    ({ chatId, userId, isTyping }: { chatId: string; userId: string; isTyping: boolean }) => {
+      const existing = typingTimers.get(chatId);
+      if (existing) clearTimeout(existing);
+
+      if (!isTyping) {
+        typingTimers.delete(chatId);
+        socketStore.setTyping(chatId, null);
+        return;
+      }
+
+      socketStore.setTyping(chatId, userId);
+      // The sender's own idle timer should clear this, but a dropped packet or
+      // a backgrounded app would otherwise leave "typing..." on screen forever.
+      typingTimers.set(
+        chatId,
+        setTimeout(() => {
+          typingTimers.delete(chatId);
+          socketStore.setTyping(chatId, null);
+        }, TYPING_EXPIRY_MS),
+      );
+    },
+  );
 
   // Rooms live on the server socket, so a reconnect starts with none of them.
   activeSocket.on("connect", () => {
@@ -176,6 +228,8 @@ export const disconnectSocket = () => {
   socket?.disconnect();
   socket = null;
   activeChatId = null;
+  typingTimers.forEach((timer) => clearTimeout(timer));
+  typingTimers.clear();
   socketStore.reset();
 };
 

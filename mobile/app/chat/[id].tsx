@@ -3,14 +3,15 @@ import MessageBubble from "@/components/MessageBubble";
 import { MessageThreadSkeleton } from "@/components/MessageThreadSkeleton";
 import { useMe } from "@/hooks/useAuth";
 import { useMessages, useSendMessage } from "@/hooks/useMessages";
-import { setActiveChat, useSocketStore } from "@/lib/socket";
+import { emitTyping, setActiveChat, useSocketStore } from "@/lib/socket";
 import type { Message } from "@/types";
 import { Ionicons } from "@expo/vector-icons";
 import { Image } from "expo-image";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   FlatList,
+  Keyboard,
   KeyboardAvoidingView,
   Platform,
   Pressable,
@@ -18,7 +19,13 @@ import {
   TextInput,
   View,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
+
+/** Matches the `py-3` the composer used before the bottom inset was added. */
+const COMPOSER_PADDING = 12;
+
+/** Silence after the last keystroke before the other side stops seeing "typing...". */
+const TYPING_IDLE_MS = 2000;
 
 // Params arrive as string | string[] because a route param can legally repeat.
 const first = (value: string | string[] | undefined) =>
@@ -40,15 +47,44 @@ export default function ChatScreen() {
 
   const [draft, setDraft] = useState("");
 
+  // Android draws edge-to-edge, so the composer sits under the navigation bar
+  // unless the inset is added back, and `adjustResize` no longer shrinks the
+  // window for the keyboard either — KeyboardAvoidingView has nothing to react
+  // to and the composer ends up behind the keyboard. Both are handled here by
+  // measuring the keyboard and lifting the thread by that much. While it is up
+  // the navigation bar inset is dropped, since the keyboard covers that strip.
+  const insets = useSafeAreaInsets();
+  const [keyboardHeight, setKeyboardHeight] = useState(0);
+  const isKeyboardVisible = keyboardHeight > 0;
+
+  useEffect(() => {
+    const shown = Keyboard.addListener("keyboardDidShow", (event) =>
+      setKeyboardHeight(event.endCoordinates.height),
+    );
+    const hidden = Keyboard.addListener("keyboardDidHide", () => setKeyboardHeight(0));
+    return () => {
+      shown.remove();
+      hidden.remove();
+    };
+  }, []);
+
+  // The reported keyboard height stops at the top of the navigation bar, not at
+  // the bottom of the screen, so lifting by it alone leaves the composer hidden
+  // behind that bar. Measured on a 560dpi device: reported 255dp + 44dp inset
+  // against a keyboard that actually occludes 301dp.
+  const androidKeyboardLift = isKeyboardVisible ? keyboardHeight + insets.bottom : 0;
+
   const { data: me } = useMe();
   const { data: messages, isLoading, error, refetch } = useMessages(chatId);
   const sendMessage = useSendMessage(chatId);
-  const { onlineUsers, isConnected } = useSocketStore();
+  const { onlineUsers, typingUsers, isConnected } = useSocketStore();
 
   // A chat with yourself carries your own id as the participant. There is no
   // other side to be online or typing, and every message in it is your own.
   const isSelfChat = Boolean(me && participantId && me._id === participantId);
   const isOnline = !isSelfChat && participantId !== undefined && onlineUsers.has(participantId);
+  const isParticipantTyping =
+    !isSelfChat && participantId !== undefined && typingUsers.get(chatId) === participantId;
 
   // Joining the room is what makes the server deliver this chat's messages
   // live; leaving on unmount also clears the chat's unread dot.
@@ -72,10 +108,46 @@ export default function ChatScreen() {
     return me ? senderId === me._id : senderId !== participantId;
   };
 
+  // One "typing" event per burst rather than one per keystroke: `isTyping`
+  // tracks what the other side has already been told, and the timer is what
+  // retracts it once the keystrokes stop.
+  const isTyping = useRef(false);
+  const idleTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const stopTyping = useCallback(() => {
+    if (idleTimer.current) {
+      clearTimeout(idleTimer.current);
+      idleTimer.current = null;
+    }
+    if (!isTyping.current) return;
+    isTyping.current = false;
+    if (chatId) emitTyping(chatId, false);
+  }, [chatId]);
+
+  // Leaving the screen mid-sentence would otherwise strand the indicator on the
+  // other device until its own expiry timer fired.
+  useEffect(() => stopTyping, [stopTyping]);
+
+  const handleDraftChange = (text: string) => {
+    setDraft(text);
+    if (!chatId || isSelfChat) return;
+
+    if (!isTyping.current) {
+      isTyping.current = true;
+      emitTyping(chatId, true);
+    }
+
+    if (idleTimer.current) clearTimeout(idleTimer.current);
+    idleTimer.current = setTimeout(stopTyping, TYPING_IDLE_MS);
+  };
+
   const handleSend = () => {
     // The draft is only cleared once the socket has actually taken the message,
     // so a send attempted while disconnected does not lose what was typed.
-    if (sendMessage(draft)) setDraft("");
+    if (sendMessage(draft)) {
+      setDraft("");
+      stopTyping();
+    }
   };
 
   // Messages are sent over the socket, so a disconnected composer can only
@@ -116,6 +188,8 @@ export default function ChatScreen() {
           </Text>
           {!isConnected ? (
             <Text className="text-xs text-primary">Connecting…</Text>
+          ) : isParticipantTyping ? (
+            <Text className="text-xs text-primary italic">typing…</Text>
           ) : isSelfChat ? (
             <Text className="text-xs text-subtle-foreground">Message yourself</Text>
           ) : isOnline ? (
@@ -125,8 +199,13 @@ export default function ChatScreen() {
       </View>
 
       <KeyboardAvoidingView
-        className="flex-1"
-        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        // `flex: 1` lives in this object rather than a `flex-1` className: the
+        // explicit `style` prop replaces NativeWind's generated style outright,
+        // which collapses the view to zero height and blanks the thread.
+        style={{ flex: 1, paddingBottom: Platform.OS === "android" ? androidKeyboardLift : 0 }}
+        // iOS resizes the window itself, so it keeps the built-in behaviour;
+        // Android is driven by the measured keyboard height above.
+        behavior={Platform.OS === "ios" ? "padding" : undefined}
       >
         {isLoading ? (
           <MessageThreadSkeleton />
@@ -171,10 +250,15 @@ export default function ChatScreen() {
           />
         )}
 
-        <View className="flex-row items-end gap-2 border-t border-surface-light px-4 py-3">
+        <View
+          className="flex-row items-end gap-2 border-t border-surface-light px-4 pt-3"
+          style={{
+            paddingBottom: COMPOSER_PADDING + (isKeyboardVisible ? 0 : insets.bottom),
+          }}
+        >
           <TextInput
             value={draft}
-            onChangeText={setDraft}
+            onChangeText={handleDraftChange}
             placeholder="Message"
             placeholderTextColor="#6B6B70"
             multiline

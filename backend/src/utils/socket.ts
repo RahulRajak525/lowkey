@@ -101,8 +101,31 @@ export const initializeSocket = (httpServer: HttpServer) => {
       },
     );
   
-  // TODO: LATER
-  socket.on("typing", async (data)=>{})
+  // Typing is broadcast to the other participants' personal rooms rather than
+  // the chat room: every client joins `user:<id>` on connect, so this reaches
+  // them whether they have the thread open or are looking at the chat list,
+  // and each recipient gets it exactly once.
+  socket.on("typing", async (data: { chatId: string; isTyping: boolean }) => {
+    try {
+      const { chatId, isTyping } = data ?? {};
+      if (!chatId) return;
+
+      const chat = await Chat.findOne({ _id: chatId, participants: userId });
+      if (!chat) return;
+
+      for (const participantId of chat.participants) {
+        if (participantId.toString() === userId) continue;
+        io.to(`user:${participantId}`).emit("user-typing", {
+          chatId,
+          userId,
+          isTyping: Boolean(isTyping),
+        });
+      }
+    } catch {
+      // A failed typing hint is not worth surfacing to the sender; the
+      // indicator simply stays as it was and clears on the receiver's timeout.
+    }
+  })
   socket.on("disconnect",()=>{
     onlineUsers.delete(userId)
 
