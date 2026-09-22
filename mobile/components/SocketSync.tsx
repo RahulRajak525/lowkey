@@ -20,7 +20,14 @@ const SocketSync = () => {
   const myId = me?._id;
 
   useEffect(() => {
-    if (!isSignedIn) {
+    // Waiting for `myId` is not an optimisation, it is what keeps the socket
+    // alive. The server's handshake middleware looks the Clerk id up in Mongo
+    // and rejects with "User not found" until AuthSync's /auth/callback has
+    // created that row. socket.io does not reconnect after a middleware
+    // rejection — it destroys the socket — so connecting too early leaves the
+    // session permanently offline instead of retrying. The callback seeds the
+    // "me" query, so `myId` appearing means the row now exists.
+    if (!isSignedIn || !myId) {
       disconnectSocket();
       return;
     }
