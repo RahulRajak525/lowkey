@@ -1,13 +1,11 @@
 import ChatItem from "@/components/ChatItem";
 import { ChatListSkeleton } from "@/components/ChatListSkeleton";
 import EmptyUI from "@/components/EmptyUI";
-import { TypingBubble } from "@/components/TypingBubble";
 import { useChats } from "@/hooks/useChats";
 import { ChatWithParticipant, hasParticipant } from "@/types";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { FlatList, Pressable, RefreshControl, Text, View } from "react-native";
-import Animated, { FadeInUp, FadeOutUp } from "react-native-reanimated";
 
 const ChatsTab = () => {
   const router = useRouter();
@@ -82,19 +80,6 @@ const ChatsTab = () => {
           />
         }
       />
-
-      {/* Chat-flavoured refresh badge: the native spinner retracts as soon as
-          the finger lifts, this stays until the refetch actually lands. */}
-      {isRefetching ? (
-        <Animated.View
-          entering={FadeInUp.duration(200)}
-          exiting={FadeOutUp.duration(200)}
-          pointerEvents="none"
-          style={{ position: "absolute", left: 0, right: 0, top: 76, alignItems: "center" }}
-        >
-          <TypingBubble label="Updating chats" dotSize={7} />
-        </Animated.View>
-      ) : null}
     </View>
   );
 };
