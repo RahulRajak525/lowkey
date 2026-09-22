@@ -92,7 +92,7 @@ const SignInPage = () => (
       className="relative z-10 flex flex-1 items-center justify-center px-6 pb-14 lg:pb-6"
     >
       <div className="glass-panel w-full max-w-sm rounded-3xl p-2 shadow-2xl shadow-black/40 sm:p-4">
-        <SignIn routing="hash" appearance={clerkAppearance} />
+        <SignIn routing="path" path="/" appearance={clerkAppearance} />
       </div>
     </motion.div>
   </div>

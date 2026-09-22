@@ -20,10 +20,6 @@ function App() {
 
       <Routes>
         <Route
-          path="/"
-          element={isSignedIn ? <Navigate to="/chats" replace /> : <SignInPage />}
-        />
-        <Route
           path="/chats"
           element={isSignedIn ? <ChatsLayout /> : <Navigate to="/" replace />}
         />
@@ -31,7 +27,14 @@ function App() {
           path="/chats/:chatId"
           element={isSignedIn ? <ChatsLayout /> : <Navigate to="/" replace />}
         />
-        <Route path="*" element={<Navigate to="/" replace />} />
+        {/* Wildcard, not an exact "/": Clerk's path-based routing needs
+            sub-paths like /sso-callback and /factor-one to also reach
+            SignInPage so its <SignIn/> component can read and process
+            them — a narrower route would 404 an OAuth redirect mid-flow. */}
+        <Route
+          path="/*"
+          element={isSignedIn ? <Navigate to="/chats" replace /> : <SignInPage />}
+        />
       </Routes>
     </>
   )
