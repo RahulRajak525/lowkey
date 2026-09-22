@@ -127,6 +127,13 @@ export const initializeSocket = (httpServer: HttpServer) => {
     }
   })
   socket.on("disconnect",()=>{
+    // A reconnect registers the new socket before the old one times out, so the
+    // replaced socket's disconnect arrives late and would otherwise clear the
+    // entry that the live socket just wrote — marking an online user offline
+    // until their next reconnect. Only the socket still holding the slot may
+    // release it.
+    if (onlineUsers.get(userId) !== socket.id) return
+
     onlineUsers.delete(userId)
 
     // Notify Others. This has to stay inside the disconnect handler: at the
