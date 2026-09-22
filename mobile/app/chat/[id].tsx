@@ -1,6 +1,7 @@
 import EmptyUI from "@/components/EmptyUI";
 import MessageBubble from "@/components/MessageBubble";
 import { MessageThreadSkeleton } from "@/components/MessageThreadSkeleton";
+import { TypingBubble } from "@/components/TypingBubble";
 import { useMe } from "@/hooks/useAuth";
 import { useMessages, useSendMessage } from "@/hooks/useMessages";
 import { emitTyping, setActiveChat, useSocketStore } from "@/lib/socket";
@@ -19,6 +20,7 @@ import {
   TextInput,
   View,
 } from "react-native";
+import Animated, { FadeInDown, FadeOutDown } from "react-native-reanimated";
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 
 /** Matches the `py-3` the composer used before the bottom inset was added. */
@@ -249,6 +251,20 @@ export default function ChatScreen() {
             }
           />
         )}
+
+        {/* Sits between the thread and the composer, so it reads as the next
+            message about to arrive rather than a status line. The bubble is
+            this component's original purpose — the loading screens borrowed
+            it, not the other way round. */}
+        {isParticipantTyping ? (
+          <Animated.View
+            entering={FadeInDown.duration(160)}
+            exiting={FadeOutDown.duration(160)}
+            className="px-4 pb-2"
+          >
+            <TypingBubble label={`${name} is typing`} dotSize={7} />
+          </Animated.View>
+        ) : null}
 
         <View
           className="flex-row items-end gap-2 border-t border-surface-light px-4 pt-3"
