@@ -2,6 +2,7 @@ import { ChatListSkeleton } from "@/components/ChatListSkeleton";
 import EmptyUI from "@/components/EmptyUI";
 import { TypingBubble } from "@/components/TypingBubble";
 import UserItem from "@/components/UserItem";
+import { useMe } from "@/hooks/useAuth";
 import { useGetOrCreateChat } from "@/hooks/useChats";
 import { useUsers } from "@/hooks/useUsers";
 import { User } from "@/types";
@@ -14,23 +15,34 @@ import { SafeAreaView } from "react-native-safe-area-context";
 /** How long the closing modal gets before the conversation is pushed. */
 const DISMISS_SETTLE_MS = 100;
 
+const SectionLabel = ({ children, className }: { children: string; className?: string }) => (
+  <Text
+    className={`mb-2 px-4 text-[11px] font-semibold uppercase tracking-widest text-subtle-foreground ${className ?? ""}`}
+  >
+    {children}
+  </Text>
+);
+
 export default function NewChatScreen() {
   const router = useRouter();
   const [searchQuery, setSearchQuery] = useState("");
 
   const { data: allUsers, isLoading, error, refetch } = useUsers();
+  const { data: me } = useMe();
   const { mutate: getOrCreateChat, isPending: isCreatingChat } = useGetOrCreateChat();
 
   // The directory is small enough to filter on the device, so typing stays
   // instant instead of waiting on a round trip per keystroke.
   const query = searchQuery.trim().toLowerCase();
-  const filteredUsers =
-    allUsers?.filter(
-      (user) =>
-        !query ||
-        user.name.toLowerCase().includes(query) ||
-        user.email.toLowerCase().includes(query),
-    ) ?? [];
+  const matchesQuery = (user: User) =>
+    !query ||
+    user.name.toLowerCase().includes(query) ||
+    user.email.toLowerCase().includes(query);
+
+  // /users is everyone *else*, so the self row is built from the signed-in user
+  // and pinned above the directory rather than sorted into it.
+  const filteredUsers = allUsers?.filter(matchesQuery) ?? [];
+  const selfUser = me && matchesQuery(me) ? me : null;
 
   const handleUserSelect = (user: User) => {
     if (isCreatingChat) return;
@@ -96,7 +108,9 @@ export default function NewChatScreen() {
       );
     }
 
-    if (filteredUsers.length === 0) {
+    // The self row is part of the scrolling content rather than a fixed band
+    // above it, so a long directory still scrolls under the search field.
+    if (filteredUsers.length === 0 && !selfUser) {
       return query ? (
         <EmptyUI
           title="No users found"
@@ -113,11 +127,7 @@ export default function NewChatScreen() {
     }
 
     return (
-      <View className="flex-1 pt-4">
-        <Text className="mb-2 px-4 text-[11px] font-semibold uppercase tracking-widest text-subtle-foreground">
-          Users
-        </Text>
-
+      <View className="flex-1">
         <FlatList
           data={filteredUsers}
           keyExtractor={(item) => item._id}
@@ -128,6 +138,31 @@ export default function NewChatScreen() {
               onPress={() => handleUserSelect(item)}
             />
           )}
+          ListHeaderComponent={
+            <View className="pt-4">
+              {selfUser ? (
+                <>
+                  <SectionLabel>You</SectionLabel>
+                  <UserItem
+                    user={selfUser}
+                    subtitle="Message yourself"
+                    showPresence={false}
+                    accessibilityLabel="Message yourself"
+                    disabled={isCreatingChat}
+                    onPress={() => handleUserSelect(selfUser)}
+                  />
+                </>
+              ) : null}
+
+              {filteredUsers.length > 0 ? (
+                <SectionLabel className={selfUser ? "mt-5" : undefined}>Users</SectionLabel>
+              ) : (
+                <Text className="px-4 pt-6 text-center text-sm text-subtle-foreground">
+                  {query ? "No other users match your search." : "Nobody else has joined yet."}
+                </Text>
+              )}
+            </View>
+          }
           keyboardShouldPersistTaps="handled"
           keyboardDismissMode="on-drag"
           showsVerticalScrollIndicator={false}

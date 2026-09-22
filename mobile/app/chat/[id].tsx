@@ -1,6 +1,6 @@
 import EmptyUI from "@/components/EmptyUI";
 import MessageBubble from "@/components/MessageBubble";
-import { TypingBubble } from "@/components/TypingBubble";
+import { MessageThreadSkeleton } from "@/components/MessageThreadSkeleton";
 import { useMe } from "@/hooks/useAuth";
 import { useMessages, useSendMessage } from "@/hooks/useMessages";
 import { setActiveChat, useSocketStore } from "@/lib/socket";
@@ -45,7 +45,10 @@ export default function ChatScreen() {
   const sendMessage = useSendMessage(chatId);
   const { onlineUsers, isConnected } = useSocketStore();
 
-  const isOnline = participantId ? onlineUsers.has(participantId) : false;
+  // A chat with yourself carries your own id as the participant. There is no
+  // other side to be online or typing, and every message in it is your own.
+  const isSelfChat = Boolean(me && participantId && me._id === participantId);
+  const isOnline = !isSelfChat && participantId !== undefined && onlineUsers.has(participantId);
 
   // Joining the room is what makes the server deliver this chat's messages
   // live; leaving on unmount also clears the chat's unread dot.
@@ -62,6 +65,7 @@ export default function ChatScreen() {
   const orderedMessages = useMemo(() => [...(messages ?? [])].reverse(), [messages]);
 
   const isMine = (message: Message) => {
+    if (isSelfChat) return true;
     const senderId = typeof message.sender === "string" ? message.sender : message.sender._id;
     // Before /auth/me resolves, fall back to the one thing the route already
     // knows: in a 1:1 chat, anyone who is not the participant is me.
@@ -108,9 +112,12 @@ export default function ChatScreen() {
         <View className="flex-1">
           <Text className="text-lg font-semibold text-foreground" numberOfLines={1}>
             {name}
+            {isSelfChat ? <Text className="text-subtle-foreground"> (You)</Text> : null}
           </Text>
           {!isConnected ? (
             <Text className="text-xs text-primary">Connecting…</Text>
+          ) : isSelfChat ? (
+            <Text className="text-xs text-subtle-foreground">Message yourself</Text>
           ) : isOnline ? (
             <Text className="text-xs text-subtle-foreground">Online</Text>
           ) : null}
@@ -122,9 +129,7 @@ export default function ChatScreen() {
         behavior={Platform.OS === "ios" ? "padding" : "height"}
       >
         {isLoading ? (
-          <View className="flex-1 items-center justify-center">
-            <TypingBubble label="Loading messages" />
-          </View>
+          <MessageThreadSkeleton />
         ) : error ? (
           <View className="flex-1 items-center justify-center gap-4 px-8">
             <Text className="text-center text-muted-foreground">Failed to load messages</Text>
@@ -153,7 +158,11 @@ export default function ChatScreen() {
                     loading it just reads as a spinner that never stops. */}
                 <EmptyUI
                   title="No messages yet"
-                  subtitle={`Say hi to ${name}`}
+                  subtitle={
+                    isSelfChat
+                      ? "Send yourself notes, links and reminders"
+                      : `Say hi to ${name}`
+                  }
                   iconName="chatbubble-ellipses-outline"
                   iconSize={56}
                 />

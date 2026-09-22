@@ -3,24 +3,40 @@ import type { AuthRequest } from "../middleware/auth";
 import { Chat } from "../models/Chat";
 import { Types } from "mongoose";
 
+/**
+ * A chat with yourself is stored as a one-element participants array, so it is
+ * the participant count — not a flag — that identifies it. Kept in one place
+ * because both the list and the get-or-create route have to agree on it.
+ */
+const isSelfChat = (chat: { participants: unknown[] }) => chat.participants.length === 1;
+
+/**
+ * The single shape both chat endpoints return. A normal chat resolves to the
+ * other participant; a self chat has none, so it resolves to the user
+ * themselves and the client labels it "(You)".
+ */
+function formatChat(chat: any, userId: string | undefined) {
+   const self = chat.participants.find((p: any) => p?._id.toString() === userId)
+   const otherParticipant = chat.participants.find((p: any) => p?._id.toString() !== userId)
+
+   return {
+      _id: chat._id,
+      participant: (isSelfChat(chat) ? self : otherParticipant) ?? null,
+      isSelf: isSelfChat(chat),
+      lastMessage: chat.lastMessage,
+      lastMessageAt: chat.lastMessageAt,
+      createdAt: chat.createdAt
+   }
+}
+
 export async function getChats(req:AuthRequest, res:Response, next:NextFunction){
    try {
     const userId = req.userId
       const chats = await Chat.find({participants:userId})
        .populate("participants", "name email avatar")
        .populate("lastMessage").sort({lastMessageAt:-1})
-       
-       const formattedChats = chats.map(chat=>{
-         const otherParticipant = chat.participants.find(p=>p._id.toString() !==userId)
-         return {
-            _id:chat._id,
-            participant : otherParticipant ?? null,
-            lastMessage : chat.lastMessage,
-            lastMessageAt : chat.lastMessageAt,
-            createdAt : chat.createdAt
-         }
-       })
-       res.json(formattedChats)
+
+       res.json(chats.map(chat => formatChat(chat, userId)))
    } catch (error) {
       res.status(500)
       next(error)
@@ -42,32 +58,28 @@ export async function getOrCreateChat(req:AuthRequest, res:Response, next:NextFu
          return
       }
 
-      if(userId===participantId){
-         res.status(400).json({message:"Cannot create chat with yourself"})
-         return
-      }
+      // Messaging yourself is allowed, and gets a chat of its own holding only
+      // you. The two lookups have to stay separate: `$all` ignores duplicates,
+      // so `$all: [userId, userId]` would match any chat the user is in and
+      // hand back whichever conversation happened to be first.
+      const isSelf = userId === participantId
+      const query = isSelf
+         // Exact array equality, so a two-person chat cannot satisfy it.
+         ? { participants: [userId] }
+         : { participants: { $all: [userId, participantId] } }
 
-      let chat = await Chat.findOne({
-         participants: { $all :[ userId , participantId]},
-      }) 
+      let chat = await Chat.findOne(query)
       .populate("participants", "name email avatar")
        .populate("lastMessage")
        if(!chat){
-         const newChat = new Chat({participants :[userId , participantId]})
+         const newChat = new Chat({participants : isSelf ? [userId] : [userId , participantId]})
          await newChat.save()
          chat  = await newChat.populate("participants","name email avatar")
 
        }
 
-       const otherParticipant = chat.participants.find(p=>p._id.toString() !==userId)
-       res.json({
-         _id:chat._id,
-         participant: otherParticipant ?? null,
-         lastMessage : chat.lastMessage,
-         lastMessageAt : chat.lastMessageAt,
-         createdAt: chat.createdAt
-       })
-    
+       res.json(formatChat(chat, userId))
+
    } catch (error) {
      res.status(500)
       next(error)

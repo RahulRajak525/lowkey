@@ -7,18 +7,26 @@ const UserItem = ({
   user,
   onPress,
   disabled,
+  /** Replaces the email line, e.g. "Message yourself" on the self row. */
+  subtitle,
+  /** The signed-in user is never in the online set, so their row opts out. */
+  showPresence = true,
+  accessibilityLabel,
 }: {
   user: User;
   onPress: () => void;
   disabled?: boolean;
+  subtitle?: string;
+  showPresence?: boolean;
+  accessibilityLabel?: string;
 }) => {
   const { onlineUsers } = useSocketStore();
-  const isOnline = onlineUsers.has(user._id);
+  const isOnline = showPresence && onlineUsers.has(user._id);
 
   return (
     <Pressable
       accessibilityRole="button"
-      accessibilityLabel={`Start a chat with ${user.name}`}
+      accessibilityLabel={accessibilityLabel ?? `Start a chat with ${user.name}`}
       onPress={onPress}
       disabled={disabled}
       className="flex-row items-center gap-3 px-4 py-3 active:bg-surface-light"
@@ -43,7 +51,7 @@ const UserItem = ({
           {user.name}
         </Text>
         <Text className="mt-0.5 text-xs text-subtle-foreground" numberOfLines={1}>
-          {user.email}
+          {subtitle ?? user.email}
         </Text>
       </View>
     </Pressable>

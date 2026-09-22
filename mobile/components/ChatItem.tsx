@@ -18,8 +18,11 @@ const ChatItem = ({ chat, onPress }: { chat: ChatWithParticipant; onPress: () =>
 
   const { onlineUsers, typingUsers, unreadChats } = useSocketStore();
 
-  const isOnline = onlineUsers.has(participant._id);
-  const isTyping = typingUsers.get(chat._id) === participant._id;
+  // Presence is about the person on the other side, and in a self chat there is
+  // none: the user is always here, and cannot be typing to themselves from
+  // somewhere else.
+  const isOnline = !chat.isSelf && onlineUsers.has(participant._id);
+  const isTyping = !chat.isSelf && typingUsers.get(chat._id) === participant._id;
   const hasUnread = unreadChats.has(chat._id);
 
   return (
@@ -47,6 +50,7 @@ const ChatItem = ({ chat, onPress }: { chat: ChatWithParticipant; onPress: () =>
             className={`text-base font-medium ${hasUnread ? "text-primary" : "text-foreground"}`}
           >
             {participant.name}
+            {chat.isSelf ? <Text className="text-subtle-foreground"> (You)</Text> : null}
           </Text>
 
           <View className="flex-row items-center gap-2">
@@ -65,7 +69,8 @@ const ChatItem = ({ chat, onPress }: { chat: ChatWithParticipant; onPress: () =>
               className={`text-sm flex-1 mr-3 ${hasUnread ? "text-foreground font-medium" : "text-subtle-foreground"}`}
               numberOfLines={1}
             >
-              {chat.lastMessage?.text || "No messages yet"}
+              {chat.lastMessage?.text ||
+                (chat.isSelf ? "Message yourself" : "No messages yet")}
             </Text>
           )}
         </View>

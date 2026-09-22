@@ -45,6 +45,12 @@ export interface ChatLastMessage {
 export interface Chat {
   _id: string;
   participant: MessageSender | null;
+  /**
+   * True for the user's chat with themselves, where `participant` is the user
+   * rather than someone else. Optional so a client running against an older
+   * backend, which did not send the field, still parses.
+   */
+  isSelf?: boolean;
   lastMessage: ChatLastMessage | null;
   lastMessageAt: string;
   createdAt: string;
