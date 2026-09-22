@@ -1,7 +1,7 @@
 import { useMe } from "@/hooks/useAuth";
 import { messagesQueryKey } from "@/hooks/useMessages";
 import { connectSocket, disconnectSocket, getActiveChatId, socketStore } from "@/lib/socket";
-import type { Message } from "@/types";
+import type { Chat, Message } from "@/types";
 import { useAuth } from "@clerk/expo";
 import * as Sentry from "@sentry/react-native";
 import { useQueryClient } from "@tanstack/react-query";
@@ -35,6 +35,7 @@ const SocketSync = () => {
     const socket = connectSocket(getToken);
 
     const handleNewMessage = (message: Message) => {
+      const senderId = typeof message.sender === "string" ? message.sender : message.sender._id;
       queryClient.setQueryData<Message[]>(messagesQueryKey(message.chat), (previous) => {
         // Not cached means the thread has never been opened; the query will
         // fetch it fresh, so there is nothing to keep up to date here.
@@ -58,10 +59,43 @@ const SocketSync = () => {
         return [...kept, message];
       });
 
-      // The chat list shows the last message and orders by it.
-      queryClient.invalidateQueries({ queryKey: ["chats"] });
+      // The list shows the last message and orders by it, and the event already
+      // carries everything that row needs, so the row is updated straight from
+      // it rather than from a refetch.
+      let isKnownChat = false;
 
-      const senderId = typeof message.sender === "string" ? message.sender : message.sender._id;
+      queryClient.setQueryData<Chat[]>(["chats"], (previous) => {
+        if (!previous) return previous;
+
+        const index = previous.findIndex((chat) => chat._id === message.chat);
+        if (index === -1) return previous;
+        isKnownChat = true;
+
+        const updated: Chat = {
+          ...previous[index],
+          lastMessage: {
+            _id: message._id,
+            text: message.text,
+            sender: senderId,
+            createdAt: message.createdAt,
+          },
+          lastMessageAt: message.createdAt,
+        };
+
+        // The server orders by lastMessageAt, so the row has to move too.
+        const rest = previous.filter((_, position) => position !== index);
+        return [updated, ...rest].sort(
+          (a, b) => new Date(b.lastMessageAt).getTime() - new Date(a.lastMessageAt).getTime(),
+        );
+      });
+
+      // Only worth a round trip when the chat is missing from the list, and
+      // actively harmful otherwise: messages arriving in quick succession share
+      // one in-flight /chats request, and a response generated before the newest
+      // message was saved lands after the write above and overwrites it. That is
+      // what left the row showing the second-to-last message.
+      if (!isKnownChat) queryClient.invalidateQueries({ queryKey: ["chats"] });
+
       if (senderId !== myId && message.chat !== getActiveChatId()) {
         socketStore.setChatUnread(message.chat, true);
       }
