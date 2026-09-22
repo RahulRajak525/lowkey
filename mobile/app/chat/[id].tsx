@@ -262,7 +262,11 @@ export default function ChatScreen() {
             exiting={FadeOutDown.duration(160)}
             className="px-4 pb-2"
           >
-            <TypingBubble label={`${name} is typing`} dotSize={7} />
+            {/* White to match an incoming message's text, since this bubble
+                stands in for one. The orange default belongs to the loading
+                screens, where the bubble is the app's spinner rather than a
+                message. */}
+            <TypingBubble dotSize={7} dotColor="#FFFFFF" />
           </Animated.View>
         ) : null}
 

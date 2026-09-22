@@ -19,7 +19,7 @@ type MessageBubbleProps = {
 const MessageBubble = ({ message, isMine }: MessageBubbleProps) => (
   <View className={`w-full px-1 py-1 ${isMine ? "items-end" : "items-start"}`}>
     <View
-      className={`max-w-[80%] px-4 py-2.5 ${isMine ? "bg-primary" : "bg-surface-card"}`}
+      className={`max-w-[80%] px-4 py-2.5 ${isMine ? "bg-primary" : "bg-gray-100"}`}
       style={{
         borderTopLeftRadius: 18,
         borderTopRightRadius: 18,
@@ -29,7 +29,7 @@ const MessageBubble = ({ message, isMine }: MessageBubbleProps) => (
         opacity: message.pending ? 0.6 : 1,
       }}
     >
-      <Text className={`text-base ${isMine ? "text-surface-dark" : "text-foreground"}`}>
+      <Text className={`text-base ${isMine ? "text-surface-dark" : "text-black"}`}>
         {message.text}
       </Text>
     </View>
