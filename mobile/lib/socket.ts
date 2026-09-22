@@ -117,7 +117,10 @@ let activeChatId: string | null = null;
 export const connectSocket = (getToken: () => Promise<string | null>) => {
   if (socket) return socket;
 
-  socket = io(API_URL, {
+  // The handlers below close over this local rather than the module-level
+  // `socket`: that one is `Socket | null` and reassignable, so TypeScript
+  // cannot keep the non-null narrowing alive inside a callback.
+  const activeSocket = io(API_URL, {
     // Clerk session tokens are short-lived, so `auth` is a callback rather than
     // a captured value: socket.io runs it before every connection attempt, and
     // a reconnect after the app was backgrounded would otherwise hand the
@@ -130,35 +133,41 @@ export const connectSocket = (getToken: () => Promise<string | null>) => {
     transports: ["websocket"],
   });
 
-  socket.on("online-users", ({ userIds }: { userIds: string[] }) => {
+  socket = activeSocket;
+
+  activeSocket.on("online-users", ({ userIds }: { userIds: string[] }) => {
+    console.log("Received online-users:", userIds)
     socketStore.setOnlineUsers(userIds);
   });
-  socket.on("user-online", ({ userId }: { userId: string }) => {
+  activeSocket.on("user-online", ({ userId }: { userId: string }) => {
     socketStore.setUserOnline(userId, true);
   });
-  socket.on("user-offline", ({ userId }: { userId: string }) => {
+  activeSocket.on("user-offline", ({ userId }: { userId: string }) => {
     socketStore.setUserOnline(userId, false);
   });
 
   // Rooms live on the server socket, so a reconnect starts with none of them.
-  socket.on("connect", () => {
+  activeSocket.on("connect", () => {
+    console.log("Socket connected", {socketId : activeSocket.id})
     socketStore.setConnected(true);
-    if (activeChatId) socket?.emit("join-chat", activeChatId);
+    if (activeChatId) activeSocket.emit("join-chat", activeChatId);
   });
 
-  socket.on("disconnect", () => {
+  activeSocket.on("disconnect", () => {
+    console.log("Socket disconnect", {socketId : activeSocket.id})
     socketStore.setConnected(false);
   });
 
   // Sending is socket-only, so a handshake that never succeeds leaves the
   // composer inert. Without this it fails silently: socket.io retries forever
   // and reports nothing.
-  socket.on("connect_error", (error) => {
+  activeSocket.on("connect_error", (error) => {
+    console.log("Socket connect error", {socketId : activeSocket.id, error: error.message})
     socketStore.setConnected(false);
     Sentry.logger.warn(Sentry.logger.fmt`Socket connect failed: ${error.message}`);
   });
 
-  return socket;
+  return activeSocket;
 };
 
 export const getSocket = () => socket;
