@@ -1,23 +1,38 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from './assets/vite.svg'
-import heroImg from './assets/hero.png'
-import './App.css'
-import { Show, SignInButton, SignUpButton, UserButton } from '@clerk/react'
+import { Navigate, Route, Routes } from 'react-router-dom'
+import { useAuth } from '@clerk/react'
+import AuthSync from '@/components/AuthSync'
+import SocketSync from '@/components/SocketSync'
+import SplashScreen from '@/components/common/SplashScreen'
+import SignInPage from '@/pages/SignInPage'
+import ChatsLayout from '@/pages/ChatsLayout'
 
 function App() {
-  const [count, setCount] = useState(0)
+  const { isLoaded, isSignedIn } = useAuth()
+
+  if (!isLoaded) {
+    return <SplashScreen />
+  }
 
   return (
     <>
-    <h1>Hello world</h1>
-     <Show when="signed-out">
-          <SignInButton mode="modal"/>
-          <SignUpButton />
-        </Show>
-        <Show when="signed-in">
-          <UserButton />
-        </Show>
+      <AuthSync />
+      <SocketSync />
+
+      <Routes>
+        <Route
+          path="/"
+          element={isSignedIn ? <Navigate to="/chats" replace /> : <SignInPage />}
+        />
+        <Route
+          path="/chats"
+          element={isSignedIn ? <ChatsLayout /> : <Navigate to="/" replace />}
+        />
+        <Route
+          path="/chats/:chatId"
+          element={isSignedIn ? <ChatsLayout /> : <Navigate to="/" replace />}
+        />
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
     </>
   )
 }
