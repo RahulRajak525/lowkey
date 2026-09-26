@@ -1,11 +1,10 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { AnimatePresence, motion } from 'framer-motion'
-import { CloudOff, Search, UserPlus, X } from 'lucide-react'
+import { CloudOff, Loader2, Mail, Search, UserPlus, X } from 'lucide-react'
 import { useMe } from '@/hooks/useAuth'
 import { useGetOrCreateChat } from '@/hooks/useChats'
-import { useUsers } from '@/hooks/useUsers'
-import { ChatListSkeleton } from './ChatListSkeleton'
+import { isLikelyEmail, useSearchUserByEmail } from '@/hooks/useUsers'
 import UserRow from './UserRow'
 import EmptyState from '@/components/common/EmptyState'
 import { TypingBubble } from '@/components/common/TypingBubble'
@@ -20,18 +19,24 @@ const NewChatModal = ({ onClose }) => {
   const navigate = useNavigate()
   const [query, setQuery] = useState('')
 
-  const { data: allUsers, isLoading, error, refetch } = useUsers()
   const { data: me } = useMe()
   const { mutate: getOrCreateChat, isPending } = useGetOrCreateChat()
 
-  const normalizedQuery = query.trim().toLowerCase()
-  const matchesQuery = (user) =>
-    !normalizedQuery ||
-    user.name.toLowerCase().includes(normalizedQuery) ||
-    user.email.toLowerCase().includes(normalizedQuery)
+  const trimmedQuery = query.trim()
+  // There is no "browse everyone" endpoint — someone can only be found by
+  // already knowing their exact email — so a query never fires until the
+  // text actually looks like a complete address.
+  const looksLikeEmail = isLikelyEmail(trimmedQuery)
+  const {
+    data: foundUser,
+    isFetching: isSearching,
+    error: searchError,
+    refetch: retrySearch,
+  } = useSearchUserByEmail(trimmedQuery)
 
-  const filteredUsers = allUsers?.filter(matchesQuery) ?? []
-  const selfUser = me && matchesQuery(me) ? me : null
+  // With the search box empty there is nothing to look up yet, so the only
+  // option offered is the always-available self chat.
+  const showingSelf = trimmedQuery.length === 0
 
   const handleSelect = (user) => {
     if (isPending) return
@@ -41,6 +46,83 @@ const NewChatModal = ({ onClose }) => {
         navigate(`/chats/${chat._id}`)
       },
     })
+  }
+
+  const renderBody = () => {
+    if (showingSelf) {
+      return (
+        <>
+          {me ? (
+            <>
+              <SectionLabel>You</SectionLabel>
+              <UserRow
+                user={me}
+                subtitle="Message yourself"
+                showPresence={false}
+                disabled={isPending}
+                onSelect={() => handleSelect(me)}
+              />
+            </>
+          ) : null}
+          <p className="px-3 pt-8 text-center text-sm text-subtle-foreground">
+            Enter someone&apos;s email above to start a new conversation with them.
+          </p>
+        </>
+      )
+    }
+
+    if (!looksLikeEmail) {
+      return (
+        <EmptyState
+          icon={Mail}
+          title="Keep typing…"
+          subtitle="Enter a full email address to search, e.g. name@example.com"
+        />
+      )
+    }
+
+    if (isSearching) {
+      return (
+        <div className="flex flex-1 items-center justify-center py-16">
+          <Loader2 size={22} className="animate-spin text-subtle-foreground" />
+        </div>
+      )
+    }
+
+    if (searchError) {
+      return (
+        <EmptyState
+          icon={CloudOff}
+          title="Search failed"
+          action={
+            <button
+              type="button"
+              onClick={() => retrySearch()}
+              className="mt-2 rounded-full bg-primary px-5 py-2.5 text-sm font-semibold text-surface-dark"
+            >
+              Retry
+            </button>
+          }
+        />
+      )
+    }
+
+    if (!foundUser) {
+      return (
+        <EmptyState
+          icon={UserPlus}
+          title="No user found"
+          subtitle={`Nobody is signed up with "${trimmedQuery}"`}
+        />
+      )
+    }
+
+    return (
+      <>
+        <SectionLabel>Found</SectionLabel>
+        <UserRow user={foundUser} disabled={isPending} onSelect={() => handleSelect(foundUser)} />
+      </>
+    )
   }
 
   return (
@@ -63,7 +145,7 @@ const NewChatModal = ({ onClose }) => {
         <div className="flex items-center gap-3 px-5 pb-4 pt-5">
           <div className="min-w-0 flex-1">
             <h2 className="font-display text-lg font-semibold text-foreground">New chat</h2>
-            <p className="text-xs text-subtle-foreground">Search for a user to start chatting</p>
+            <p className="text-xs text-subtle-foreground">Find someone by their email address</p>
           </div>
           <button
             type="button"
@@ -80,66 +162,16 @@ const NewChatModal = ({ onClose }) => {
             <Search size={16} className="text-subtle-foreground" />
             <input
               autoFocus
+              type="email"
               value={query}
               onChange={(event) => setQuery(event.target.value)}
-              placeholder="Search users"
+              placeholder="Search by email"
               className="flex-1 bg-transparent text-[15px] text-foreground placeholder:text-subtle-foreground focus:outline-none"
             />
           </div>
         </div>
 
-        <div className="flex-1 overflow-y-auto px-3 pb-5">
-          {isLoading ? (
-            <ChatListSkeleton rows={5} />
-          ) : error ? (
-            <EmptyState
-              icon={CloudOff}
-              title="Failed to load users"
-              action={
-                <button
-                  type="button"
-                  onClick={() => refetch()}
-                  className="mt-2 rounded-full bg-primary px-5 py-2.5 text-sm font-semibold text-surface-dark"
-                >
-                  Retry
-                </button>
-              }
-            />
-          ) : filteredUsers.length === 0 && !selfUser ? (
-            <EmptyState
-              icon={UserPlus}
-              title={normalizedQuery ? 'No users found' : 'Nobody to show yet'}
-              subtitle={
-                normalizedQuery ? `Nothing matches "${query.trim()}"` : 'New people will appear here once they join.'
-              }
-            />
-          ) : (
-            <>
-              {selfUser ? (
-                <>
-                  <SectionLabel>You</SectionLabel>
-                  <UserRow
-                    user={selfUser}
-                    subtitle="Message yourself"
-                    showPresence={false}
-                    disabled={isPending}
-                    onSelect={() => handleSelect(selfUser)}
-                  />
-                </>
-              ) : null}
-
-              {filteredUsers.length > 0 ? <SectionLabel>Users</SectionLabel> : null}
-              {filteredUsers.map((user) => (
-                <UserRow
-                  key={user._id}
-                  user={user}
-                  disabled={isPending}
-                  onSelect={() => handleSelect(user)}
-                />
-              ))}
-            </>
-          )}
-        </div>
+        <div className="flex flex-1 flex-col overflow-y-auto px-3 pb-5">{renderBody()}</div>
 
         <AnimatePresence>
           {isPending ? (

@@ -1,10 +1,10 @@
 import { Router } from "express";
 import { protectRoute } from "../middleware/auth";
-import { getUsers } from "../controllers/userController";
+import { searchUserByEmail } from "../controllers/userController";
 
 const router = Router()
 
-router.get("/", protectRoute, getUsers)
-
+// GET /api/users/search?email=someone@example.com
+router.get("/search", protectRoute, searchUserByEmail)
 
 export default router

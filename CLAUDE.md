@@ -48,10 +48,12 @@ src/scripts/             seed.ts, dropStaleUserIndexes.ts
 | GET | /chats/with/:participantId | getOrCreateChat | formatChat (self-chat allowed; un-deletes for me if I'd deleted it) |
 | DELETE | /chats/:chatId | deleteChat | "delete for me" — $addToSet my id into deletedFor; hard-deletes chat+messages once every participant is in it |
 | GET | /messages/chat/:chatId | getMessages | Message[] oldest first, sender populated, excludes ones I deleted "for me" |
-| GET | /users | getUsers | all users except me |
+| GET | /users/search?email= | searchUserByEmail | one User (or null) by exact email, excluding self |
 
 `formatChat` → `{_id, participant (other user, or self if isSelf, or null), isSelf, lastMessage, lastMessageAt, createdAt}`.
 Chat delete is "for me" only (per-user `deletedFor`, cleared automatically whenever a new message lands in that chat — see send-message below); it's REST, not a socket event, since the other participant is never notified.
+
+**There is deliberately no "list all users" endpoint** — a privacy fix: a new sign-up used to see every other user in `useUsers()`'s directory. Finding someone to chat with now requires typing their exact email into New Chat, which calls `/users/search`; nothing renders until the query looks like a complete address (`isLikelyEmail` in both clients' `hooks/useUsers`).
 
 **Socket** (`src/utils/socket.ts`). Rooms: `user:<id>` (joined on connect), `chat:<id>`
 - client → server: `join-chat` / `leave-chat` (chatId) · `send-message` {chatId,text} (also clears `chat.deletedFor`) · `typing` {chatId,isTyping} · `delete-message` {chatId,messageId,forEveryone}
@@ -67,12 +69,12 @@ The same hooks and libs exist in both, so a feature change usually touches both.
 | Providers / entry | app/_layout.tsx (Clerk, Query, Sentry, theme, Stack) | main.jsx (Clerk, Query, Router) · App.jsx (routes) |
 | API client | lib/axios.ts — `API_URL` **hardcoded to Render prod** | lib/axios.js — `VITE_API_URL` or localhost:3000 |
 | Socket + presence store | lib/socket.ts | lib/socket.js |
-| Data hooks | hooks/useAuth · useChats (+useDeleteChat) · useMessages (+useDeleteMessage) · useUsers | hooks/ (same) |
+| Data hooks | hooks/useAuth · useChats (+useDeleteChat) · useMessages (+useDeleteMessage) · useUsers (useSearchUserByEmail, isLikelyEmail) | hooks/ (same) |
 | Background sync | components/AuthSync · SocketSync | components/AuthSync · SocketSync |
 | Loading UI | components/TypingBubble · ChatListSkeleton · MessageThreadSkeleton | components/common/TypingBubble · chat/*Skeleton |
 | Theme | global.css (`:root` + `.dark:root`) + tailwind.config.js · lib/theme.ts | index.css `@theme` (dark only) |
 
-Query keys: `["me"]` · `["chats"]` · `["users"]` · `["messages", chatId]`
+Query keys: `["me"]` · `["chats"]` · `["users", "search", email]` · `["messages", chatId]`
 
 **mobile screens** (expo-router, `mobile/app/`)
 ```
@@ -82,7 +84,7 @@ index.tsx               redirect to (auth) or (tabs)
 (tabs)/index.tsx        chat list (components/ChatItem, long-press → delete via Alert; EmptyUI)
 (tabs)/profile.tsx      avatar upload (ImagePicker → Clerk setProfileImage, base64), theme toggle, sign out
 chat/[id].tsx           thread + composer (components/MessageBubble, long-press → delete)
-new-chat/index.tsx      modal: pick user (components/UserItem) → getOrCreateChat
+new-chat/index.tsx      search a user by exact email (components/UserItem) → getOrCreateChat
 ```
 Also: lib/authErrors.ts, types/index.ts. `mobile/CLAUDE.md` says to read the Expo v57 docs before writing Expo code.
 

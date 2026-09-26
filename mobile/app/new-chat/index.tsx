@@ -1,15 +1,14 @@
-import { ChatListSkeleton } from "@/components/ChatListSkeleton";
 import EmptyUI from "@/components/EmptyUI";
 import { TypingBubble } from "@/components/TypingBubble";
 import UserItem from "@/components/UserItem";
 import { useMe } from "@/hooks/useAuth";
 import { useGetOrCreateChat } from "@/hooks/useChats";
-import { useUsers } from "@/hooks/useUsers";
+import { isLikelyEmail, useSearchUserByEmail } from "@/hooks/useUsers";
 import { User } from "@/types";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { useState } from "react";
-import { Alert, FlatList, Pressable, Text, TextInput, View } from "react-native";
+import { ActivityIndicator, Alert, Pressable, Text, TextInput, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useThemeColors } from "@/lib/theme";
 
@@ -29,22 +28,24 @@ export default function NewChatScreen() {
   const colors = useThemeColors();
   const [searchQuery, setSearchQuery] = useState("");
 
-  const { data: allUsers, isLoading, error, refetch } = useUsers();
   const { data: me } = useMe();
   const { mutate: getOrCreateChat, isPending: isCreatingChat } = useGetOrCreateChat();
 
-  // The directory is small enough to filter on the device, so typing stays
-  // instant instead of waiting on a round trip per keystroke.
-  const query = searchQuery.trim().toLowerCase();
-  const matchesQuery = (user: User) =>
-    !query ||
-    user.name.toLowerCase().includes(query) ||
-    user.email.toLowerCase().includes(query);
+  const trimmedQuery = searchQuery.trim();
+  // There is no "browse everyone" endpoint — someone can only be found by
+  // already knowing their exact email — so a query never fires until the
+  // text actually looks like a complete address.
+  const looksLikeEmail = isLikelyEmail(trimmedQuery);
+  const {
+    data: foundUser,
+    isFetching: isSearching,
+    error: searchError,
+    refetch: retrySearch,
+  } = useSearchUserByEmail(trimmedQuery);
 
-  // /users is everyone *else*, so the self row is built from the signed-in user
-  // and pinned above the directory rather than sorted into it.
-  const filteredUsers = allUsers?.filter(matchesQuery) ?? [];
-  const selfUser = me && matchesQuery(me) ? me : null;
+  // With the search box empty there is nothing to look up yet, so the only
+  // option offered is the always-available self chat.
+  const showingSelf = trimmedQuery.length === 0;
 
   const handleUserSelect = (user: User) => {
     if (isCreatingChat) return;
@@ -90,87 +91,73 @@ export default function NewChatScreen() {
   };
 
   const renderBody = () => {
-    if (isLoading) {
+    if (showingSelf) {
       return (
-        <View className="flex-1 px-4 pt-4">
-          <ChatListSkeleton label="Finding people to chat with" />
+        <View className="flex-1 pt-4">
+          {me ? (
+            <>
+              <SectionLabel>You</SectionLabel>
+              <UserItem
+                user={me}
+                subtitle="Message yourself"
+                showPresence={false}
+                accessibilityLabel="Message yourself"
+                disabled={isCreatingChat}
+                onPress={() => handleUserSelect(me)}
+              />
+            </>
+          ) : null}
+          <Text className="px-4 pt-8 text-center text-sm text-subtle-foreground">
+            Enter someone&apos;s email above to start a new conversation with them.
+          </Text>
         </View>
       );
     }
 
-    if (error) {
+    if (!looksLikeEmail) {
+      return (
+        <EmptyUI
+          title="Keep typing…"
+          subtitle="Enter a full email address to search, e.g. name@example.com"
+          iconName="mail-outline"
+        />
+      );
+    }
+
+    if (isSearching) {
+      return (
+        <View className="flex-1 items-center justify-center py-20">
+          <ActivityIndicator color="#F4A261" />
+        </View>
+      );
+    }
+
+    if (searchError) {
       return (
         <View className="flex-1 items-center justify-center px-8">
           <Ionicons name="cloud-offline-outline" size={56} color={colors.subtleForeground} />
-          <Text className="mt-4 text-lg text-muted-foreground">Failed to load users</Text>
-          <Pressable onPress={() => refetch()} className="mt-6 rounded-full bg-primary px-6 py-3">
+          <Text className="mt-4 text-lg text-muted-foreground">Search failed</Text>
+          <Pressable onPress={() => retrySearch()} className="mt-6 rounded-full bg-primary px-6 py-3">
             <Text className="font-semibold text-on-primary">Retry</Text>
           </Pressable>
         </View>
       );
     }
 
-    // The self row is part of the scrolling content rather than a fixed band
-    // above it, so a long directory still scrolls under the search field.
-    if (filteredUsers.length === 0 && !selfUser) {
-      return query ? (
+    if (!foundUser) {
+      return (
         <EmptyUI
-          title="No users found"
-          subtitle={`Nothing matches "${searchQuery.trim()}"`}
-          iconName="search-outline"
-        />
-      ) : (
-        <EmptyUI
-          title="Nobody to show yet"
-          subtitle="New people will appear here once they join."
+          title="No user found"
+          subtitle={`Nobody is signed up with "${trimmedQuery}"`}
           iconName="person-add-outline"
         />
       );
     }
 
     return (
-      <View className="flex-1">
-        <FlatList
-          data={filteredUsers}
-          keyExtractor={(item) => item._id}
-          renderItem={({ item }) => (
-            <UserItem
-              user={item}
-              disabled={isCreatingChat}
-              onPress={() => handleUserSelect(item)}
-            />
-          )}
-          ListHeaderComponent={
-            <View className="pt-4">
-              {selfUser ? (
-                <>
-                  <SectionLabel>You</SectionLabel>
-                  <UserItem
-                    user={selfUser}
-                    subtitle="Message yourself"
-                    showPresence={false}
-                    accessibilityLabel="Message yourself"
-                    disabled={isCreatingChat}
-                    onPress={() => handleUserSelect(selfUser)}
-                  />
-                </>
-              ) : null}
-
-              {filteredUsers.length > 0 ? (
-                <SectionLabel className={selfUser ? "mt-5" : undefined}>Users</SectionLabel>
-              ) : (
-                <Text className="px-4 pt-6 text-center text-sm text-subtle-foreground">
-                  {query ? "No other users match your search." : "Nobody else has joined yet."}
-                </Text>
-              )}
-            </View>
-          }
-          keyboardShouldPersistTaps="handled"
-          keyboardDismissMode="on-drag"
-          showsVerticalScrollIndicator={false}
-          contentContainerStyle={{ paddingBottom: 24 }}
-          ItemSeparatorComponent={() => <View className="ml-[72px] h-px bg-surface-light" />}
-        />
+      <View className="flex-1 pt-4">
+        <SectionLabel>Found</SectionLabel>
+        <UserItem user={foundUser} disabled={isCreatingChat} onPress={() => handleUserSelect(foundUser)} />
       </View>
     );
   };
@@ -192,20 +179,21 @@ export default function NewChatScreen() {
           <View className="flex-1">
             <Text className="text-xl font-bold text-foreground">New chat</Text>
             <Text className="mt-0.5 text-xs text-muted-foreground">
-              Search for a user to start chatting
+              Find someone by their email address
             </Text>
           </View>
         </View>
 
-        <View className="mt-4 h-11 flex-row items-center gap-2 rounded-full border border-surface-light bg-surface px-4">
+        <View className="mt-4 h-14 flex-row items-center gap-2 rounded-full border border-surface-light bg-surface px-4">
           <Ionicons name="search" size={16} color={colors.subtleForeground} />
           <TextInput
             value={searchQuery}
             onChangeText={setSearchQuery}
-            placeholder="Search users"
+            placeholder="Search by email"
             placeholderTextColor={colors.subtleForeground}
             autoCapitalize="none"
             autoCorrect={false}
+            keyboardType="email-address"
             returnKeyType="search"
             className="flex-1 text-base text-foreground"
           />
