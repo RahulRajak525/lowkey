@@ -8,11 +8,10 @@ import Animated, {
   withRepeat,
   withTiming,
 } from 'react-native-reanimated'
+import { useThemeColors } from '@/lib/theme'
 
 const PULSE_MS = 850
 const ROW_STAGGER_MS = 110 // bubbles breathe in sequence, like messages landing
-
-const PLACEHOLDER = '#2D2D30'
 
 // A real thread alternates sides and mixes one- and two-line messages; an even
 // ladder of same-width bubbles reads as a table instead of a conversation.
@@ -30,6 +29,7 @@ const ROWS = [
 type Row = (typeof ROWS)[number]
 
 const SkeletonBubble = ({ delay, row }: { delay: number; row: Row }) => {
+  const colors = useThemeColors()
   const pulse = useSharedValue(0)
 
   useEffect(() => {
@@ -56,7 +56,7 @@ const SkeletonBubble = ({ delay, row }: { delay: number; row: Row }) => {
         style={{
           width: row.width,
           height: row.height,
-          backgroundColor: PLACEHOLDER,
+          backgroundColor: colors.surfaceLight,
           borderTopLeftRadius: 18,
           borderTopRightRadius: 18,
           // the tail sits on the sender's side, as in MessageBubble
@@ -72,7 +72,7 @@ const SkeletonBubble = ({ delay, row }: { delay: number; row: Row }) => {
           borderRadius: 4.5,
           marginTop: 5,
           marginHorizontal: 8,
-          backgroundColor: PLACEHOLDER,
+          backgroundColor: colors.surfaceLight,
         }}
       />
     </Animated.View>

@@ -7,6 +7,8 @@ import AuthSync from "../components/AuthSync";
 import SocketSync from "../components/SocketSync";
 import { StatusBar } from "expo-status-bar";
 import * as Sentry from '@sentry/react-native';
+import { useColorScheme } from "nativewind";
+import { useRestoreThemeOnLaunch, useThemeColors } from "@/lib/theme";
 
 Sentry.init({
   dsn: 'https://3022aca7ae47a4005faecac6faec0620@o4511890536005632.ingest.de.sentry.io/4512061727244368',
@@ -41,13 +43,17 @@ if (!publishableKey) {
 }
 
 export default Sentry.wrap(function RootLayout() {
+  useRestoreThemeOnLaunch();
+  const { colorScheme } = useColorScheme();
+  const colors = useThemeColors();
+
   return (
     <ClerkProvider publishableKey={publishableKey} tokenCache={tokenCache}>
     <QueryClientProvider client={queryClient}>
       <AuthSync />
       <SocketSync />
-      <StatusBar style="light"/>
-      <Stack screenOptions={{headerShown:false, contentStyle:{backgroundColor:'#0D0D0F'}}}>
+      <StatusBar style={colorScheme === "dark" ? "light" : "dark"} />
+      <Stack screenOptions={{headerShown:false, contentStyle:{backgroundColor:colors.surfaceDark}}}>
         <Stack.Screen name="index" options={{ animation: "fade" }}/>
         <Stack.Screen name="(auth)" options={{ animation: "fade" }} />
         <Stack.Screen name="(tabs)" options={{ animation: "fade" }}/>

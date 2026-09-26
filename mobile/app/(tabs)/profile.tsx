@@ -1,31 +1,63 @@
 import { useAuth, useUser } from "@clerk/expo";
-import { View, Text, ScrollView, Pressable } from "react-native";
+import { useState } from "react";
+import { ActivityIndicator, Alert, View, Text, ScrollView, Pressable, Switch } from "react-native";
 import { Image } from "expo-image";
 import { Ionicons } from "@expo/vector-icons";
+import * as ImagePicker from "expo-image-picker";
+import * as Sentry from "@sentry/react-native";
+import { useQueryClient } from "@tanstack/react-query";
+import { useAuthCallback } from "@/hooks/useAuth";
+import { ON_PRIMARY, useThemeColors, useThemePreference } from "@/lib/theme";
 
+// `id` is a stable key the render logic below uses to special-case the
+// "Dark Mode" row with a real Switch — every item gets one so the array's
+// inferred element type stays consistent, not just the row that needs it.
 const MENU_SECTIONS = [
   {
     title: "Account",
     items: [
-      { icon: "person-outline", label: "Edit Profile", color: "#F4A261" },
-      { icon: "shield-checkmark-outline", label: "Privacy & Security", color: "#10B981" },
-      { icon: "notifications-outline", label: "Notifications", value: "On", color: "#8B5CF6" },
+      { id: "edit-profile", icon: "person-outline", label: "Edit Profile", color: "#F4A261" },
+      {
+        id: "privacy",
+        icon: "shield-checkmark-outline",
+        label: "Privacy & Security",
+        color: "#10B981",
+      },
+      {
+        id: "notifications",
+        icon: "notifications-outline",
+        label: "Notifications",
+        value: "On",
+        color: "#8B5CF6",
+      },
     ],
   },
   {
     title: "Preferences",
     items: [
-      { icon: "moon-outline", label: "Dark Mode", value: "On", color: "#6366F1" },
-      { icon: "language-outline", label: "Language", value: "English", color: "#EC4899" },
-      { icon: "cloud-outline", label: "Data & Storage", value: "1.2 GB", color: "#14B8A6" },
+      { id: "dark-mode", icon: "moon-outline", label: "Dark Mode", color: "#6366F1" },
+      {
+        id: "language",
+        icon: "language-outline",
+        label: "Language",
+        value: "English",
+        color: "#EC4899",
+      },
+      {
+        id: "data-storage",
+        icon: "cloud-outline",
+        label: "Data & Storage",
+        value: "1.2 GB",
+        color: "#14B8A6",
+      },
     ],
   },
   {
     title: "Support",
     items: [
-      { icon: "help-circle-outline", label: "Help Center", color: "#F59E0B" },
-      { icon: "chatbubble-outline", label: "Contact Us", color: "#3B82F6" },
-      { icon: "star-outline", label: "Rate the App", color: "#F4A261" },
+      { id: "help", icon: "help-circle-outline", label: "Help Center", color: "#F59E0B" },
+      { id: "contact", icon: "chatbubble-outline", label: "Contact Us", color: "#3B82F6" },
+      { id: "rate", icon: "star-outline", label: "Rate the App", color: "#F4A261" },
     ],
   },
 ];
@@ -33,6 +65,71 @@ const MENU_SECTIONS = [
 const ProfileTab = () => {
   const { signOut } = useAuth();
   const { user } = useUser();
+  const colors = useThemeColors();
+  const { isDark, setPreference } = useThemePreference();
+  const { mutateAsync: syncUser } = useAuthCallback();
+  const queryClient = useQueryClient();
+  const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
+
+  const pickAndUploadAvatar = async (source: "camera" | "library") => {
+    if (!user) return;
+
+    const permission =
+      source === "camera"
+        ? await ImagePicker.requestCameraPermissionsAsync()
+        : await ImagePicker.requestMediaLibraryPermissionsAsync();
+
+    if (!permission.granted) {
+      Alert.alert(
+        "Permission needed",
+        `Allow Whisper to access your ${source === "camera" ? "camera" : "photos"} to update your profile picture.`,
+      );
+      return;
+    }
+
+    const result = await (source === "camera"
+      ? ImagePicker.launchCameraAsync
+      : ImagePicker.launchImageLibraryAsync)({
+      mediaTypes: ["images"],
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.8,
+      base64: true,
+    });
+
+    if (result.canceled || !result.assets[0]?.base64) return;
+
+    setIsUploadingAvatar(true);
+    try {
+      // Clerk hosts and serves the image itself; the backend's User.avatar is
+      // just a cached copy of Clerk's imageUrl, refreshed the same way it is
+      // at sign-in — by re-running the callback — rather than a dedicated route.
+      // Clerk's `file` accepts a string, but despite the local URI also being a
+      // string, it rejects it (422 "must be a valid base64 encoded image") —
+      // it wants a base64 data URI, not a file:// path. expo-image-picker's
+      // `base64` output is always JPEG-encoded regardless of the source
+      // format, so the data URI's mime type is hardcoded to match.
+      await user.setProfileImage({ file: `data:image/jpeg;base64,${result.assets[0].base64}` });
+      await syncUser();
+      // `syncUser` only refreshes the `me` query; the chat list caches its own
+      // copy of this same avatar per participant and needs telling separately.
+      queryClient.invalidateQueries({ queryKey: ["chats"] });
+    } catch (error) {
+      console.error("❌ Failed to update profile image:", error);
+      Sentry.logger.error(Sentry.logger.fmt`Failed to update profile image: ${error}`);
+      Alert.alert("Upload failed", "Could not update your profile picture. Please try again.");
+    } finally {
+      setIsUploadingAvatar(false);
+    }
+  };
+
+  const handleAvatarPress = () => {
+    Alert.alert("Update profile photo", undefined, [
+      { text: "Take Photo", onPress: () => pickAndUploadAvatar("camera") },
+      { text: "Choose from Library", onPress: () => pickAndUploadAvatar("library") },
+      { text: "Cancel", style: "cancel" },
+    ]);
+  };
 
   return (
     <ScrollView
@@ -53,8 +150,16 @@ const ProfileTab = () => {
               />
             </View>
 
-            <Pressable className="absolute bottom-1 right-1 w-8 h-8 bg-primary rounded-full items-center justify-center border-2 border-surface-dark">
-              <Ionicons name="camera" size={16} color="#0D0D0F" />
+            <Pressable
+              onPress={handleAvatarPress}
+              disabled={isUploadingAvatar}
+              className="absolute bottom-1 right-1 w-8 h-8 bg-primary rounded-full items-center justify-center border-2 border-surface-dark"
+            >
+              {isUploadingAvatar ? (
+                <ActivityIndicator size="small" color={ON_PRIMARY} />
+              ) : (
+                <Ionicons name="camera" size={16} color={ON_PRIMARY} />
+              )}
             </Pressable>
           </View>
 
@@ -81,26 +186,44 @@ const ProfileTab = () => {
             {section.title}
           </Text>
           <View className="bg-surface-card rounded-2xl overflow-hidden">
-            {section.items.map((item, index) => (
-              <Pressable
-                key={item.label}
-                className={`flex-row items-center px-4 py-3.5 active:bg-surface-light ${
-                  index < section.items.length - 1 ? "border-b border-surface-light" : ""
-                }`}
-              >
-                <View
-                  className="w-9 h-9 rounded-xl items-center justify-center"
-                  style={{ backgroundColor: `${item.color}20` }}
+            {section.items.map((item, index) => {
+              const isDarkModeRow = item.id === "dark-mode";
+
+              return (
+                <Pressable
+                  key={item.label}
+                  disabled={!isDarkModeRow}
+                  onPress={isDarkModeRow ? () => setPreference(isDark ? "light" : "dark") : undefined}
+                  className={`flex-row items-center px-4 py-3.5 active:bg-surface-light ${
+                    index < section.items.length - 1 ? "border-b border-surface-light" : ""
+                  }`}
                 >
-                  <Ionicons name={item.icon as any} size={20} color={item.color} />
-                </View>
-                <Text className="flex-1 ml-3 text-foreground font-medium">{item.label}</Text>
-                {item.value && (
-                  <Text className="text-subtle-foreground text-sm mr-1">{item.value}</Text>
-                )}
-                <Ionicons name="chevron-forward" size={18} color="#6B6B70" />
-              </Pressable>
-            ))}
+                  <View
+                    className="w-9 h-9 rounded-xl items-center justify-center"
+                    style={{ backgroundColor: `${item.color}20` }}
+                  >
+                    <Ionicons name={item.icon as any} size={20} color={item.color} />
+                  </View>
+                  <Text className="flex-1 ml-3 text-foreground font-medium">{item.label}</Text>
+                  {isDarkModeRow ? (
+                    <Switch
+                      value={isDark}
+                      onValueChange={(value) => setPreference(value ? "dark" : "light")}
+                      trackColor={{ false: colors.surfaceLight, true: "#F4A261" }}
+                      thumbColor="#FFFFFF"
+                      ios_backgroundColor={colors.surfaceLight}
+                    />
+                  ) : (
+                    <>
+                      {item.value && (
+                        <Text className="text-subtle-foreground text-sm mr-1">{item.value}</Text>
+                      )}
+                      <Ionicons name="chevron-forward" size={18} color={colors.subtleForeground} />
+                    </>
+                  )}
+                </Pressable>
+              );
+            })}
           </View>
         </View>
       ))}

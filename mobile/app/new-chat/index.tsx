@@ -11,6 +11,7 @@ import { useRouter } from "expo-router";
 import { useState } from "react";
 import { Alert, FlatList, Pressable, Text, TextInput, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { useThemeColors } from "@/lib/theme";
 
 /** How long the closing modal gets before the conversation is pushed. */
 const DISMISS_SETTLE_MS = 100;
@@ -25,6 +26,7 @@ const SectionLabel = ({ children, className }: { children: string; className?: s
 
 export default function NewChatScreen() {
   const router = useRouter();
+  const colors = useThemeColors();
   const [searchQuery, setSearchQuery] = useState("");
 
   const { data: allUsers, isLoading, error, refetch } = useUsers();
@@ -99,10 +101,10 @@ export default function NewChatScreen() {
     if (error) {
       return (
         <View className="flex-1 items-center justify-center px-8">
-          <Ionicons name="cloud-offline-outline" size={56} color="#6B6B70" />
+          <Ionicons name="cloud-offline-outline" size={56} color={colors.subtleForeground} />
           <Text className="mt-4 text-lg text-muted-foreground">Failed to load users</Text>
           <Pressable onPress={() => refetch()} className="mt-6 rounded-full bg-primary px-6 py-3">
-            <Text className="font-semibold text-surface-dark">Retry</Text>
+            <Text className="font-semibold text-on-primary">Retry</Text>
           </Pressable>
         </View>
       );
@@ -196,12 +198,12 @@ export default function NewChatScreen() {
         </View>
 
         <View className="mt-4 h-11 flex-row items-center gap-2 rounded-full border border-surface-light bg-surface px-4">
-          <Ionicons name="search" size={16} color="#6B6B70" />
+          <Ionicons name="search" size={16} color={colors.subtleForeground} />
           <TextInput
             value={searchQuery}
             onChangeText={setSearchQuery}
             placeholder="Search users"
-            placeholderTextColor="#6B6B70"
+            placeholderTextColor={colors.subtleForeground}
             autoCapitalize="none"
             autoCorrect={false}
             returnKeyType="search"
@@ -214,7 +216,7 @@ export default function NewChatScreen() {
               onPress={() => setSearchQuery("")}
               hitSlop={8}
             >
-              <Ionicons name="close-circle" size={18} color="#6B6B70" />
+              <Ionicons name="close-circle" size={18} color={colors.subtleForeground} />
             </Pressable>
           ) : null}
         </View>

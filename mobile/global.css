@@ -1,3 +1,32 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/*
+ * Semantic surface/text tokens as RGB triplets, so tailwind.config.js can
+ * reference them as `rgb(var(--x) / <alpha-value>)` and every `bg-surface`,
+ * `text-foreground`, etc. class in the app resolves to the right value for
+ * the active color scheme without touching each call site. `colorScheme.set()`
+ * (from nativewind) toggles which block below is active.
+ */
+@layer base {
+  :root {
+    --color-surface: 247 247 248;
+    --color-surface-light: 231 231 234;
+    --color-surface-dark: 255 255 255;
+    --color-surface-card: 255 255 255;
+    --color-foreground: 17 17 18;
+    --color-muted-foreground: 90 90 96;
+    --color-subtle-foreground: 138 138 145;
+  }
+
+  .dark:root {
+    --color-surface: 26 26 29;
+    --color-surface-light: 45 45 48;
+    --color-surface-dark: 13 13 15;
+    --color-surface-card: 36 36 40;
+    --color-foreground: 255 255 255;
+    --color-muted-foreground: 160 160 165;
+    --color-subtle-foreground: 107 107 112;
+  }
+}

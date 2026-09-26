@@ -29,7 +29,7 @@ const MessageBubble = ({ message, isMine }: MessageBubbleProps) => (
         opacity: message.pending ? 0.6 : 1,
       }}
     >
-      <Text className={`text-base ${isMine ? "text-surface-dark" : "text-black"}`}>
+      <Text className={`text-base ${isMine ? "text-on-primary" : "text-black"}`}>
         {message.text}
       </Text>
     </View>

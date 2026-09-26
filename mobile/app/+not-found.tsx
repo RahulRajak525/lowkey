@@ -16,13 +16,13 @@ export default function NotFound() {
   }
 
   return (
-    <View className="flex-1 items-center justify-center gap-3 bg-[#0D0D0F] px-8">
-      <Text className="text-2xl font-bold text-white">Page not found</Text>
-      <Text className="text-center text-base text-[#A0A0A5]">
+    <View className="flex-1 items-center justify-center gap-3 bg-surface-dark px-8">
+      <Text className="text-2xl font-bold text-foreground">Page not found</Text>
+      <Text className="text-center text-base text-muted-foreground">
         That screen doesn&apos;t exist.
       </Text>
       <Link href="/" replace className="mt-2">
-        <Text className="text-base font-semibold text-[#F4A261]">Go home</Text>
+        <Text className="text-base font-semibold text-primary">Go home</Text>
       </Link>
     </View>
   )

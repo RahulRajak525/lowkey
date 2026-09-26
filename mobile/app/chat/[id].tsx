@@ -5,6 +5,7 @@ import { TypingBubble } from "@/components/TypingBubble";
 import { useMe } from "@/hooks/useAuth";
 import { useMessages, useSendMessage } from "@/hooks/useMessages";
 import { emitTyping, setActiveChat, useSocketStore } from "@/lib/socket";
+import { ON_PRIMARY, useThemeColors } from "@/lib/theme";
 import type { Message } from "@/types";
 import { Ionicons } from "@expo/vector-icons";
 import { Image } from "expo-image";
@@ -80,6 +81,7 @@ export default function ChatScreen() {
   const { data: messages, isLoading, error, refetch } = useMessages(chatId);
   const sendMessage = useSendMessage(chatId);
   const { onlineUsers, typingUsers, isConnected } = useSocketStore();
+  const colors = useThemeColors();
 
   // A chat with yourself carries your own id as the participant. There is no
   // other side to be online or typing, and every message in it is your own.
@@ -262,11 +264,12 @@ export default function ChatScreen() {
             exiting={FadeOutDown.duration(160)}
             className="px-4 pb-2"
           >
-            {/* White to match an incoming message's text, since this bubble
-                stands in for one. The orange default belongs to the loading
-                screens, where the bubble is the app's spinner rather than a
-                message. */}
-            <TypingBubble dotSize={7} dotColor="#FFFFFF" />
+            {/* Matches an incoming message's text color, since this bubble
+                stands in for one — which flips with the theme, so it stays
+                readable against the (also theme-reactive) bubble behind it.
+                The orange default belongs to the loading screens, where the
+                bubble is the app's spinner rather than a message. */}
+            <TypingBubble dotSize={7} dotColor={colors.foreground} />
           </Animated.View>
         ) : null}
 
@@ -280,7 +283,7 @@ export default function ChatScreen() {
             value={draft}
             onChangeText={handleDraftChange}
             placeholder="Message"
-            placeholderTextColor="#6B6B70"
+            placeholderTextColor={colors.subtleForeground}
             multiline
             className="max-h-32 flex-1 rounded-3xl bg-surface-card px-4 py-3 text-base text-foreground"
             onSubmitEditing={handleSend}
@@ -294,7 +297,7 @@ export default function ChatScreen() {
               canSend ? "bg-primary active:opacity-70" : "bg-surface-light"
             }`}
           >
-            <Ionicons name="send" size={20} color={canSend ? "#0D0D0F" : "#6B6B70"} />
+            <Ionicons name="send" size={20} color={canSend ? ON_PRIMARY : colors.subtleForeground} />
           </Pressable>
         </View>
       </KeyboardAvoidingView>

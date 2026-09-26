@@ -6,30 +6,33 @@ import { ChatWithParticipant, hasParticipant } from "@/types";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { FlatList, Pressable, RefreshControl, Text, View } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { ON_PRIMARY, useThemeColors } from "@/lib/theme";
 
 const ChatsTab = () => {
   const router = useRouter();
   const { data: chats, isLoading, isRefetching, error, refetch } = useChats();
+  const colors = useThemeColors();
 
   if (isLoading) {
     return (
-      <View className="flex-1 bg-surface">
+      <SafeAreaView className="flex-1 bg-surface" edges={["top"]}>
         <Header />
         <View className="flex-1 px-5">
           <ChatListSkeleton />
         </View>
-      </View>
+      </SafeAreaView>
     );
   }
 
   if (error) {
     return (
-      <View className="flex-1 bg-surface items-center justify-center">
+      <SafeAreaView className="flex-1 bg-surface items-center justify-center" edges={["top"]}>
         <Text className="text-red-500 text-3xl">Failed to load chats</Text>
         <Pressable onPress={() => refetch()} className="mt-4 px-4 py-2 bg-primary rounded-lg">
           <Text className="text-foreground">Retry</Text>
         </Pressable>
-      </View>
+      </SafeAreaView>
     );
   }
 
@@ -50,7 +53,7 @@ const ChatsTab = () => {
   };
 
   return (
-    <View className="flex-1 bg-surface">
+    <SafeAreaView className="flex-1 bg-surface" edges={["top"]}>
       <FlatList
         data={visibleChats}
         keyExtractor={(item) => item._id}
@@ -65,7 +68,7 @@ const ChatsTab = () => {
             onRefresh={refetch}
             tintColor="#F4A261"
             colors={["#F4A261"]}
-            progressBackgroundColor="#242428"
+            progressBackgroundColor={colors.surfaceCard}
           />
         }
         ListEmptyComponent={
@@ -73,14 +76,14 @@ const ChatsTab = () => {
             title="No chats yet"
             subtitle="Start a conversation!"
             iconName="chatbubbles-outline"
-            iconColor="#6B6B70"
+            iconColor={colors.subtleForeground}
             iconSize={64}
             buttonLabel="New Chat"
             onPressButton={() => router.push("/new-chat")}
           />
         }
       />
-    </View>
+    </SafeAreaView>
   );
 };
 
@@ -97,7 +100,7 @@ function Header() {
           className="size-10 bg-primary rounded-full items-center justify-center"
           onPress={() => router.push("/new-chat")}
         >
-          <Ionicons name="create-outline" size={20} color="#0D0D0F" />
+          <Ionicons name="create-outline" size={20} color={ON_PRIMARY} />
         </Pressable>
       </View>
     </View>
