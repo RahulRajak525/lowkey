@@ -1,7 +1,8 @@
 import { useState } from 'react'
+import { useNavigate, useParams } from 'react-router-dom'
 import { UserButton } from '@clerk/react'
 import { CloudOff, MessageSquareDashed, Plus, Search } from 'lucide-react'
-import { useChats } from '@/hooks/useChats'
+import { useChats, useDeleteChat } from '@/hooks/useChats'
 import { hasParticipant } from '@/lib/types'
 import ChatListItem from './ChatListItem'
 import { ChatListSkeleton } from './ChatListSkeleton'
@@ -9,7 +10,21 @@ import EmptyState from '@/components/common/EmptyState'
 
 const Sidebar = ({ onNewChat }) => {
   const { data: chats, isLoading, error, refetch } = useChats()
+  const { mutate: deleteChat } = useDeleteChat()
+  const navigate = useNavigate()
+  const { chatId: openChatId } = useParams()
   const [query, setQuery] = useState('')
+
+  const handleDelete = (chat) => {
+    const label = chat.isSelf ? 'this chat' : `your chat with ${chat.participant.name}`
+    if (!window.confirm(`Delete ${label}? It will be removed from your list. If they message you again, it comes back.`)) {
+      return
+    }
+    // The open thread reads from the same ["chats"] list this removes the
+    // row from, so it has to be navigated away from explicitly.
+    if (openChatId === chat._id) navigate('/chats')
+    deleteChat(chat._id)
+  }
 
   const visibleChats = chats?.filter(hasParticipant) ?? []
   const normalizedQuery = query.trim().toLowerCase()
@@ -83,7 +98,7 @@ const Sidebar = ({ onNewChat }) => {
         ) : (
           <div className="flex flex-col gap-0.5">
             {filteredChats.map((chat) => (
-              <ChatListItem key={chat._id} chat={chat} />
+              <ChatListItem key={chat._id} chat={chat} onDelete={handleDelete} />
             ))}
           </div>
         )}

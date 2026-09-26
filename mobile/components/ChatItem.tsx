@@ -13,7 +13,13 @@ const formatLastMessageAt = (iso: string | null | undefined) => {
   return formatDistanceToNow(date, { addSuffix: false });
 };
 
-const ChatItem = ({ chat, onPress }: { chat: ChatWithParticipant; onPress: () => void }) => {
+type ChatItemProps = {
+  chat: ChatWithParticipant;
+  onPress: () => void;
+  onLongPress?: () => void;
+};
+
+const ChatItem = ({ chat, onPress, onLongPress }: ChatItemProps) => {
   const participant = chat.participant;
 
   const { onlineUsers, typingUsers, unreadChats } = useSocketStore();
@@ -26,7 +32,12 @@ const ChatItem = ({ chat, onPress }: { chat: ChatWithParticipant; onPress: () =>
   const hasUnread = unreadChats.has(chat._id);
 
   return (
-    <Pressable className="flex-row items-center py-3 active:opacity-70" onPress={onPress}>
+    <Pressable
+      className="flex-row items-center py-3 active:opacity-70"
+      onPress={onPress}
+      onLongPress={onLongPress}
+      delayLongPress={300}
+    >
       {/* avatar & online indicator */}
       <View className="relative">
         {participant.avatar ? (

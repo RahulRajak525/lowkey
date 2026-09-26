@@ -1,6 +1,6 @@
 import { useMe } from "@/hooks/useAuth";
 import { useApi } from "@/lib/axios";
-import { getSocket } from "@/lib/socket";
+import { emitDeleteMessage, getSocket } from "@/lib/socket";
 import type { Message } from "@/types";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback } from "react";
@@ -62,5 +62,36 @@ export const useSendMessage = (chatId: string) => {
       return true;
     },
     [chatId, me, queryClient],
+  );
+};
+
+/**
+ * Applied optimistically here and confirmed by the server's `message-deleted`
+ * echo (see SocketSync) — the same pattern `useSendMessage` uses. "For
+ * everyone" leaves the placeholder bubble in place; "for me" removes the
+ * message from this device's view entirely.
+ */
+export const useDeleteMessage = (chatId: string) => {
+  const queryClient = useQueryClient();
+
+  return useCallback(
+    (messageId: string, forEveryone: boolean) => {
+      const socket = getSocket();
+      if (!chatId || !socket?.connected) return false;
+
+      queryClient.setQueryData<Message[]>(messagesQueryKey(chatId), (previous) => {
+        if (!previous) return previous;
+        if (!forEveryone) return previous.filter((message) => message._id !== messageId);
+        return previous.map((message) =>
+          message._id === messageId
+            ? { ...message, isDeleted: true, text: "This message was deleted" }
+            : message,
+        );
+      });
+
+      emitDeleteMessage(chatId, messageId, forEveryone);
+      return true;
+    },
+    [chatId, queryClient],
   );
 };

@@ -29,6 +29,8 @@ export interface Message {
    * confirmed by the server. Server messages never carry it.
    */
   pending?: boolean;
+  /** Deleted "for everyone" — `text` is already the placeholder string. */
+  isDeleted?: boolean;
 }
 
 /** Narrows the populated sender the message list renders from. */

@@ -10,7 +10,7 @@ import MessageBubble from './MessageBubble'
 import { MessageThreadSkeleton } from './MessageThreadSkeleton'
 import { useMe } from '@/hooks/useAuth'
 import { useChats } from '@/hooks/useChats'
-import { useMessages, useSendMessage } from '@/hooks/useMessages'
+import { useDeleteMessage, useMessages, useSendMessage } from '@/hooks/useMessages'
 import { emitTyping, setActiveChat, useSocketStore } from '@/lib/socket'
 import { hasParticipant } from '@/lib/types'
 
@@ -23,6 +23,7 @@ const MessageThread = ({ chatId }) => {
   const { data: me } = useMe()
   const { data: messages, isLoading, error, refetch } = useMessages(chatId)
   const sendMessage = useSendMessage(chatId)
+  const deleteMessage = useDeleteMessage(chatId)
   const { onlineUsers, typingUsers, isConnected } = useSocketStore()
 
   const chat = useMemo(() => chats?.find((c) => c._id === chatId), [chats, chatId])
@@ -187,7 +188,12 @@ const MessageThread = ({ chatId }) => {
           <div className="flex flex-col gap-2.5">
             <AnimatePresence initial={false}>
               {messages.map((message) => (
-                <MessageBubble key={message._id} message={message} isMine={isMine(message)} />
+                <MessageBubble
+                  key={message._id}
+                  message={message}
+                  isMine={isMine(message)}
+                  onDelete={deleteMessage}
+                />
               ))}
             </AnimatePresence>
           </div>

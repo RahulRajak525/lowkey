@@ -108,12 +108,54 @@ const SocketSync = () => {
       queryClient.invalidateQueries({ queryKey: ["messages"] });
     };
 
+    // Authoritative echo of a delete request — including ones this device
+    // already applied optimistically (useDeleteMessage) and ones made from
+    // another of this user's devices.
+    const handleMessageDeleted = ({
+      chatId,
+      messageId,
+      forEveryone,
+      message,
+    }: {
+      chatId: string;
+      messageId: string;
+      forEveryone: boolean;
+      message?: Message;
+    }) => {
+      const placeholder = message?.text ?? "This message was deleted";
+
+      queryClient.setQueryData<Message[]>(messagesQueryKey(chatId), (previous) => {
+        if (!previous) return previous;
+        if (!forEveryone) return previous.filter((existing) => existing._id !== messageId);
+        return previous.map((existing) =>
+          existing._id === messageId
+            ? { ...existing, isDeleted: true, text: placeholder }
+            : existing,
+        );
+      });
+
+      // Only a "for everyone" delete can be the chat list's preview text —
+      // a "for me" delete never reaches the other participant, and the
+      // deleting user's own preview is unaffected by hiding one message.
+      if (!forEveryone) return;
+
+      queryClient.setQueryData<Chat[]>(["chats"], (previous) =>
+        previous?.map((chat) =>
+          chat._id === chatId && chat.lastMessage?._id === messageId
+            ? { ...chat, lastMessage: { ...chat.lastMessage, text: placeholder } }
+            : chat,
+        ),
+      );
+    };
+
     socket.on("new-message", handleNewMessage);
     socket.on("socket-error", handleSocketError);
+    socket.on("message-deleted", handleMessageDeleted);
 
     return () => {
       socket.off("new-message", handleNewMessage);
       socket.off("socket-error", handleSocketError);
+      socket.off("message-deleted", handleMessageDeleted);
     };
   }, [isSignedIn, getToken, queryClient, myId]);
 

@@ -18,7 +18,7 @@ try {
         return
     }
 
-   const messages = await Message.find({chat:chatId}).populate("sender", "name email avatar").sort({createdAt:1})
+   const messages = await Message.find({chat:chatId, deletedFor:{$ne:userId}}).populate("sender", "name email avatar").sort({createdAt:1})
     res.json(messages)
 
 } catch (error) {

@@ -3,7 +3,7 @@ import MessageBubble from "@/components/MessageBubble";
 import { MessageThreadSkeleton } from "@/components/MessageThreadSkeleton";
 import { TypingBubble } from "@/components/TypingBubble";
 import { useMe } from "@/hooks/useAuth";
-import { useMessages, useSendMessage } from "@/hooks/useMessages";
+import { useDeleteMessage, useMessages, useSendMessage } from "@/hooks/useMessages";
 import { emitTyping, setActiveChat, useSocketStore } from "@/lib/socket";
 import { ON_PRIMARY, useThemeColors } from "@/lib/theme";
 import type { Message } from "@/types";
@@ -80,6 +80,7 @@ export default function ChatScreen() {
   const { data: me } = useMe();
   const { data: messages, isLoading, error, refetch } = useMessages(chatId);
   const sendMessage = useSendMessage(chatId);
+  const deleteMessage = useDeleteMessage(chatId);
   const { onlineUsers, typingUsers, isConnected } = useSocketStore();
   const colors = useThemeColors();
 
@@ -225,7 +226,9 @@ export default function ChatScreen() {
             data={orderedMessages}
             inverted
             keyExtractor={(item) => item._id}
-            renderItem={({ item }) => <MessageBubble message={item} isMine={isMine(item)} />}
+            renderItem={({ item }) => (
+              <MessageBubble message={item} isMine={isMine(item)} onDelete={deleteMessage} />
+            )}
             showsVerticalScrollIndicator={false}
             keyboardDismissMode="interactive"
             contentContainerStyle={{ paddingHorizontal: 16, paddingVertical: 16 }}

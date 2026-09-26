@@ -84,6 +84,10 @@ export const initializeSocket = (httpServer: HttpServer) => {
 
           chat.lastMessage = message._id;
           chat.lastMessageAt = new Date();
+          // Anyone who had deleted this chat "for me" gets it back now that
+          // there is new activity in it, same as the other side reappearing
+          // in their list.
+          chat.deletedFor = [];
           await chat.save();
 
           await message.populate("sender", "name avatar");
@@ -126,6 +130,62 @@ export const initializeSocket = (httpServer: HttpServer) => {
       // indicator simply stays as it was and clears on the receiver's timeout.
     }
   })
+  // A message can be deleted "for everyone" (only by its own sender — text is
+  // cleared and a placeholder shows in its place for both sides) or "for me"
+  // (hides it only on the requesting user's own devices; the other side's
+  // copy is untouched).
+  socket.on(
+    "delete-message",
+    async (data: { chatId: string; messageId: string; forEveryone?: boolean }) => {
+      try {
+        const { chatId, messageId, forEveryone } = data ?? {};
+        if (!chatId || !messageId) return;
+
+        const chat = await Chat.findOne({ _id: chatId, participants: userId });
+        if (!chat) {
+          socket.emit("socket-error", { message: "Chat not found" });
+          return;
+        }
+
+        const message = await Message.findOne({ _id: messageId, chat: chatId });
+        if (!message) {
+          socket.emit("socket-error", { message: "Message not found" });
+          return;
+        }
+
+        if (forEveryone) {
+          if (message.sender.toString() !== userId) {
+            socket.emit("socket-error", {
+              message: "You can only delete your own messages for everyone",
+            });
+            return;
+          }
+
+          message.isDeleted = true;
+          message.deletedAt = new Date();
+          await message.save();
+
+          const payload = { chatId, messageId, forEveryone: true, message };
+          io.to(`chat:${chatId}`).emit("message-deleted", payload);
+          for (const participantId of chat.participants) {
+            io.to(`user:${participantId}`).emit("message-deleted", payload);
+          }
+        } else {
+          await Message.updateOne({ _id: messageId }, { $addToSet: { deletedFor: userId } });
+          // Only the requester's own view changes, so only their other
+          // sessions (not the other participant) need to hear about it.
+          io.to(`user:${userId}`).emit("message-deleted", {
+            chatId,
+            messageId,
+            forEveryone: false,
+          });
+        }
+      } catch (error) {
+        socket.emit("socket-error", { message: "Failed to delete message" });
+      }
+    },
+  );
+
   socket.on("disconnect",()=>{
     // A reconnect registers the new socket before the old one times out, so the
     // replaced socket's disconnect arrives late and would otherwise clear the

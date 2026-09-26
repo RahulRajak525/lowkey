@@ -130,6 +130,15 @@ export const emitTyping = (chatId: string, isTyping: boolean) => {
 };
 
 /**
+ * `forEveryone` requires being the message's own sender (enforced server
+ * side) and leaves a "message deleted" placeholder for both sides;
+ * otherwise it only hides the message on this account's own devices.
+ */
+export const emitDeleteMessage = (chatId: string, messageId: string, forEveryone: boolean) => {
+  socket?.emit("delete-message", { chatId, messageId, forEveryone });
+};
+
+/**
  * The chat currently on screen. Incoming messages for it are read, not unread,
  * and it is rejoined automatically after a reconnect.
  */

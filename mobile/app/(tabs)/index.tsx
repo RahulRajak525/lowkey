@@ -1,17 +1,18 @@
 import ChatItem from "@/components/ChatItem";
 import { ChatListSkeleton } from "@/components/ChatListSkeleton";
 import EmptyUI from "@/components/EmptyUI";
-import { useChats } from "@/hooks/useChats";
+import { useChats, useDeleteChat } from "@/hooks/useChats";
 import { ChatWithParticipant, hasParticipant } from "@/types";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
-import { FlatList, Pressable, RefreshControl, Text, View } from "react-native";
+import { Alert, FlatList, Pressable, RefreshControl, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { ON_PRIMARY, useThemeColors } from "@/lib/theme";
 
 const ChatsTab = () => {
   const router = useRouter();
   const { data: chats, isLoading, isRefetching, error, refetch } = useChats();
+  const { mutate: deleteChat } = useDeleteChat();
   const colors = useThemeColors();
 
   if (isLoading) {
@@ -40,6 +41,17 @@ const ChatsTab = () => {
   // id to open, so it is dropped rather than rendered as a blank row.
   const visibleChats = chats?.filter(hasParticipant) ?? [];
 
+  const handleChatLongPress = (chat: ChatWithParticipant) => {
+    Alert.alert(
+      chat.isSelf ? "Delete this chat?" : `Delete chat with ${chat.participant.name}?`,
+      "It will be removed from your chat list. If they message you again, it comes back.",
+      [
+        { text: "Delete", style: "destructive", onPress: () => deleteChat(chat._id) },
+        { text: "Cancel", style: "cancel" },
+      ],
+    );
+  };
+
   const handleChatPress = (chat: ChatWithParticipant) => {
     router.push({
       pathname: "/chat/[id]",
@@ -57,7 +69,13 @@ const ChatsTab = () => {
       <FlatList
         data={visibleChats}
         keyExtractor={(item) => item._id}
-        renderItem={({ item }) => <ChatItem chat={item} onPress={() => handleChatPress(item)} />}
+        renderItem={({ item }) => (
+          <ChatItem
+            chat={item}
+            onPress={() => handleChatPress(item)}
+            onLongPress={() => handleChatLongPress(item)}
+          />
+        )}
         showsVerticalScrollIndicator={false}
         contentInsetAdjustmentBehavior="automatic"
         contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 16, paddingBottom: 24 }}

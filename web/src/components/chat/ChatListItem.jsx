@@ -1,5 +1,6 @@
 import { NavLink } from 'react-router-dom'
 import { formatDistanceToNowStrict } from 'date-fns'
+import { Trash2 } from 'lucide-react'
 import Avatar from '@/components/common/Avatar'
 import { useSocketStore } from '@/lib/socket'
 
@@ -12,7 +13,7 @@ const formatLastMessageAt = (iso) => {
   return formatDistanceToNowStrict(date, { addSuffix: false })
 }
 
-const ChatListItem = ({ chat }) => {
+const ChatListItem = ({ chat, onDelete }) => {
   const participant = chat.participant
   const { onlineUsers, typingUsers, unreadChats } = useSocketStore()
 
@@ -22,6 +23,14 @@ const ChatListItem = ({ chat }) => {
   const isOnline = !chat.isSelf && onlineUsers.has(participant._id)
   const isTyping = !chat.isSelf && typingUsers.get(chat._id) === participant._id
   const hasUnread = unreadChats.has(chat._id)
+
+  const handleDeleteClick = (event) => {
+    // This button sits inside the NavLink, so its click has to be stopped
+    // from also opening the chat.
+    event.preventDefault()
+    event.stopPropagation()
+    onDelete(chat)
+  }
 
   return (
     <NavLink
@@ -48,9 +57,19 @@ const ChatListItem = ({ chat }) => {
                 {participant.name}
                 {chat.isSelf ? <span className="text-subtle-foreground"> (You)</span> : null}
               </p>
-              <span className="shrink-0 text-[11px] text-subtle-foreground">
+              <span className="shrink-0 text-[11px] text-subtle-foreground group-hover:hidden">
                 {formatLastMessageAt(chat.lastMessageAt)}
               </span>
+              {onDelete ? (
+                <button
+                  type="button"
+                  aria-label="Delete chat"
+                  onClick={handleDeleteClick}
+                  className="hidden shrink-0 rounded-full p-1 text-subtle-foreground hover:bg-surface-light hover:text-red-400 group-hover:block"
+                >
+                  <Trash2 size={14} />
+                </button>
+              ) : null}
             </div>
 
             <div className="mt-0.5 flex items-center justify-between gap-2">

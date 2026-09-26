@@ -1,6 +1,7 @@
 import type { NextFunction, Response } from "express";
 import type { AuthRequest } from "../middleware/auth";
 import { Chat } from "../models/Chat";
+import { Message } from "../models/Message";
 import { Types } from "mongoose";
 
 /**
@@ -32,7 +33,10 @@ function formatChat(chat: any, userId: string | undefined) {
 export async function getChats(req:AuthRequest, res:Response, next:NextFunction){
    try {
     const userId = req.userId
-      const chats = await Chat.find({participants:userId})
+      // A chat this user deleted "for me" is excluded here but not dropped
+      // from the database — send-message clears deletedFor when the other
+      // side messages again, which is what brings it back.
+      const chats = await Chat.find({participants:userId, deletedFor:{$ne:userId}})
        .populate("participants", "name email avatar")
        .populate("lastMessage").sort({lastMessageAt:-1})
 
@@ -76,12 +80,55 @@ export async function getOrCreateChat(req:AuthRequest, res:Response, next:NextFu
          await newChat.save()
          chat  = await newChat.populate("participants","name email avatar")
 
+       } else if (userId && chat.deletedFor.some((id) => id.toString() === userId)) {
+         // Picking this person again after having deleted the chat means
+         // starting over, so it un-hides for this user (only) rather than
+         // staying gone until the other side happens to message first.
+         chat.deletedFor = chat.deletedFor.filter((id) => id.toString() !== userId)
+         await chat.save()
        }
 
        res.json(formatChat(chat, userId))
 
    } catch (error) {
      res.status(500)
+      next(error)
+   }
+}
+
+export async function deleteChat(req:AuthRequest, res:Response, next:NextFunction){
+   try {
+      const userId = req.userId
+      const { chatId } = req.params
+
+      if(typeof chatId !== "string" || !Types.ObjectId.isValid(chatId)){
+         res.status(400).json({message:"Invalid chat ID"})
+         return
+      }
+
+      const chat = await Chat.findOne({_id:chatId, participants:userId})
+      if(!chat){
+         res.status(404).json({message:"Chat not found"})
+         return
+      }
+
+      const alreadyDeletedByOthers = chat.participants
+         .filter((id) => id.toString() !== userId)
+         .every((id) => chat.deletedFor.some((deletedId) => deletedId.toString() === id.toString()))
+
+      if(alreadyDeletedByOthers){
+         // Every participant has now deleted it (a self chat clears this
+         // immediately, since there is no "other side" to wait on) — nothing
+         // left to keep, so the conversation is dropped for good.
+         await Message.deleteMany({chat:chatId})
+         await chat.deleteOne()
+      } else {
+         await Chat.updateOne({_id:chatId}, {$addToSet:{deletedFor:userId}})
+      }
+
+      res.json({message:"Chat deleted"})
+   } catch (error) {
+      res.status(500)
       next(error)
    }
 }
