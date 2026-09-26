@@ -50,3 +50,21 @@ export const useDeleteChat = () => {
     },
   });
 };
+
+/**
+ * The same "delete for me" rules as `useDeleteChat`, applied to every chat at
+ * once — one tap to empty the whole list instead of clearing it one
+ * conversation at a time.
+ */
+export const useDeleteAllChats = () => {
+  const { apiWithAuth } = useApi();
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async () => {
+      await apiWithAuth({ method: "DELETE", url: "/chats" });
+    },
+    onSuccess: () => {
+      queryClient.setQueryData<Chat[]>(["chats"], []);
+    },
+  });
+};

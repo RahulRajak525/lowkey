@@ -96,6 +96,18 @@ export async function getOrCreateChat(req:AuthRequest, res:Response, next:NextFu
    }
 }
 
+/**
+ * Whether deleting this chat "for me" would leave nobody else holding onto
+ * it — i.e. every other participant already has. Shared by the single- and
+ * bulk-delete routes so the "nothing left to keep, drop it for good" rule
+ * only lives in one place.
+ */
+function wouldBeFullyDeleted(chat: { participants: Types.ObjectId[]; deletedFor: Types.ObjectId[] }, userId: string) {
+   return chat.participants
+      .filter((id) => id.toString() !== userId)
+      .every((id) => chat.deletedFor.some((deletedId) => deletedId.toString() === id.toString()))
+}
+
 export async function deleteChat(req:AuthRequest, res:Response, next:NextFunction){
    try {
       const userId = req.userId
@@ -112,11 +124,7 @@ export async function deleteChat(req:AuthRequest, res:Response, next:NextFunctio
          return
       }
 
-      const alreadyDeletedByOthers = chat.participants
-         .filter((id) => id.toString() !== userId)
-         .every((id) => chat.deletedFor.some((deletedId) => deletedId.toString() === id.toString()))
-
-      if(alreadyDeletedByOthers){
+      if (userId && wouldBeFullyDeleted(chat, userId)) {
          // Every participant has now deleted it (a self chat clears this
          // immediately, since there is no "other side" to wait on) — nothing
          // left to keep, so the conversation is dropped for good.
@@ -127,6 +135,42 @@ export async function deleteChat(req:AuthRequest, res:Response, next:NextFunctio
       }
 
       res.json({message:"Chat deleted"})
+   } catch (error) {
+      res.status(500)
+      next(error)
+   }
+}
+
+/**
+ * "Delete for me" applied to every chat at once — one tap in Settings rather
+ * than clearing the list one conversation at a time. Same per-chat rules as
+ * `deleteChat`: a chat only disappears from *this* user's list, and only
+ * gets dropped from the database once every other participant has also
+ * deleted their copy.
+ */
+export async function deleteAllChats(req:AuthRequest, res:Response, next:NextFunction){
+   try {
+      const userId = req.userId
+      const chats = await Chat.find({participants:userId, deletedFor:{$ne:userId}})
+
+      const toHardDelete: string[] = []
+      const toSoftDelete: string[] = []
+
+      for (const chat of chats) {
+         const target = userId && wouldBeFullyDeleted(chat, userId) ? toHardDelete : toSoftDelete
+         target.push(chat._id.toString())
+      }
+
+      if (toHardDelete.length) {
+         await Message.deleteMany({chat:{$in:toHardDelete}})
+         await Chat.deleteMany({_id:{$in:toHardDelete}})
+      }
+
+      if (toSoftDelete.length) {
+         await Chat.updateMany({_id:{$in:toSoftDelete}}, {$addToSet:{deletedFor:userId}})
+      }
+
+      res.json({message:"All chats deleted", count: chats.length})
    } catch (error) {
       res.status(500)
       next(error)

@@ -1,8 +1,8 @@
 import { useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { UserButton } from '@clerk/react'
-import { CloudOff, MessageSquareDashed, Plus, Search } from 'lucide-react'
-import { useChats, useDeleteChat } from '@/hooks/useChats'
+import { CloudOff, MessageSquareDashed, Plus, Search, Trash2 } from 'lucide-react'
+import { useChats, useDeleteAllChats, useDeleteChat } from '@/hooks/useChats'
 import { hasParticipant } from '@/lib/types'
 import ChatListItem from './ChatListItem'
 import { ChatListSkeleton } from './ChatListSkeleton'
@@ -11,6 +11,7 @@ import EmptyState from '@/components/common/EmptyState'
 const Sidebar = ({ onNewChat }) => {
   const { data: chats, isLoading, error, refetch } = useChats()
   const { mutate: deleteChat } = useDeleteChat()
+  const { mutate: deleteAllChats, isPending: isDeletingAll } = useDeleteAllChats()
   const navigate = useNavigate()
   const { chatId: openChatId } = useParams()
   const [query, setQuery] = useState('')
@@ -26,6 +27,20 @@ const Sidebar = ({ onNewChat }) => {
     deleteChat(chat._id)
   }
 
+  const handleDeleteAll = () => {
+    if (!chats?.length) return
+    if (
+      !window.confirm(
+        'Delete all chats? Every conversation will be removed from your list. Anyone who messages you again will reappear there.',
+      )
+    ) {
+      return
+    }
+    // Every row is about to disappear, including whichever thread is open.
+    navigate('/chats')
+    deleteAllChats()
+  }
+
   const visibleChats = chats?.filter(hasParticipant) ?? []
   const normalizedQuery = query.trim().toLowerCase()
   const filteredChats = normalizedQuery
@@ -37,6 +52,18 @@ const Sidebar = ({ onNewChat }) => {
       <div className="flex items-center gap-3 px-5 pb-4 pt-6">
         <span className="font-display text-xl font-semibold gradient-text">Whisper</span>
         <div className="ml-auto flex items-center gap-2">
+          {chats?.length ? (
+            <button
+              type="button"
+              onClick={handleDeleteAll}
+              disabled={isDeletingAll}
+              aria-label="Delete all chats"
+              title="Delete all chats"
+              className="flex size-9 items-center justify-center rounded-full text-subtle-foreground transition-colors hover:bg-surface-card hover:text-red-400 disabled:opacity-50"
+            >
+              <Trash2 size={16} />
+            </button>
+          ) : null}
           <button
             type="button"
             onClick={onNewChat}

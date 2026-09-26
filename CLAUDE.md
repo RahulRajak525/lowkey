@@ -47,6 +47,7 @@ src/scripts/             seed.ts, dropStaleUserIndexes.ts
 | GET | /chats | getChats | formatChat[] sorted by lastMessageAt desc |
 | GET | /chats/with/:participantId | getOrCreateChat | formatChat (self-chat allowed; un-deletes for me if I'd deleted it) |
 | DELETE | /chats/:chatId | deleteChat | "delete for me" — $addToSet my id into deletedFor; hard-deletes chat+messages once every participant is in it |
+| DELETE | /chats | deleteAllChats | same rule applied to every one of my chats at once (`wouldBeFullyDeleted` shared helper) |
 | GET | /messages/chat/:chatId | getMessages | Message[] oldest first, sender populated, excludes ones I deleted "for me" |
 | GET | /users/search?email= | searchUserByEmail | one User (or null) by exact email, excluding self |
 
@@ -69,7 +70,7 @@ The same hooks and libs exist in both, so a feature change usually touches both.
 | Providers / entry | app/_layout.tsx (Clerk, Query, Sentry, theme, Stack) | main.jsx (Clerk, Query, Router) · App.jsx (routes) |
 | API client | lib/axios.ts — `API_URL` **hardcoded to Render prod** | lib/axios.js — `VITE_API_URL` or localhost:3000 |
 | Socket + presence store | lib/socket.ts | lib/socket.js |
-| Data hooks | hooks/useAuth · useChats (+useDeleteChat) · useMessages (+useDeleteMessage) · useUsers (useSearchUserByEmail, isLikelyEmail) | hooks/ (same) |
+| Data hooks | hooks/useAuth · useChats (+useDeleteChat, +useDeleteAllChats) · useMessages (+useDeleteMessage) · useUsers (useSearchUserByEmail, isLikelyEmail) | hooks/ (same) |
 | Background sync | components/AuthSync · SocketSync | components/AuthSync · SocketSync |
 | Loading UI | components/TypingBubble · ChatListSkeleton · MessageThreadSkeleton | components/common/TypingBubble · chat/*Skeleton |
 | Theme | global.css (`:root` + `.dark:root`) + tailwind.config.js · lib/theme.ts | index.css `@theme` (dark only) |
@@ -82,7 +83,7 @@ index.tsx               redirect to (auth) or (tabs)
 (auth)/index.tsx        Google/Apple sign-in → hooks/useSocialAuth + lib/ssoFlow.ts
 (auth)/sso-callback.tsx OAuth return
 (tabs)/index.tsx        chat list (components/ChatItem, long-press → delete via Alert; EmptyUI)
-(tabs)/profile.tsx      avatar upload (ImagePicker → Clerk setProfileImage, base64), theme toggle, sign out
+(tabs)/profile.tsx      avatar upload (ImagePicker → Clerk setProfileImage, base64), theme toggle, Delete All Chats, sign out
 chat/[id].tsx           thread + composer (components/MessageBubble, long-press → delete)
 new-chat/index.tsx      search a user by exact email (components/UserItem) → getOrCreateChat
 ```
@@ -92,7 +93,7 @@ Also: lib/authErrors.ts, types/index.ts. `mobile/CLAUDE.md` says to read the Exp
 ```
 pages/SignInPage.jsx    route "/*" (Clerk path routing needs the wildcard for /sso-callback)
 pages/ChatsLayout.jsx   "/chats", "/chats/:chatId" → Sidebar + MessageThread + NewChatModal
-components/chat/        Sidebar (hover trash icon on ChatListItem → delete, window.confirm), MessageThread, Composer, MessageBubble (hover "⋯" menu → delete), NewChatModal, UserRow
+components/chat/        Sidebar (header trash icon → delete all chats; hover trash icon on ChatListItem → delete one; both window.confirm), MessageThread, Composer, MessageBubble (hover "⋯" menu → delete), NewChatModal, UserRow
 components/common/      Avatar, EmptyState, SplashScreen, AuroraBackground, TypingBubble
 lib/types.js            senderOf, hasParticipant
 ```
