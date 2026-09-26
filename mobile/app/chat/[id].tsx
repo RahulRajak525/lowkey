@@ -171,36 +171,53 @@ export default function ChatScreen() {
           <Ionicons name="chevron-back" size={24} color="#F4A261" />
         </Pressable>
 
-        <View className="relative">
-          {avatar ? (
-            <Image source={avatar} style={{ width: 36, height: 36, borderRadius: 999 }} />
-          ) : (
-            <View className="size-9 items-center justify-center rounded-full bg-surface-light">
-              <Text className="text-sm font-semibold text-primary">
-                {name[0]?.toUpperCase() ?? "?"}
-              </Text>
-            </View>
-          )}
-          {isOnline && (
-            <View className="absolute bottom-0 right-0 size-3 rounded-full border-2 border-surface bg-green-500" />
-          )}
-        </View>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={`${name} — chat details`}
+          onPress={() =>
+            router.push({
+              pathname: "/chat-details",
+              params: {
+                chatId,
+                name,
+                avatar: avatar ?? "",
+                isSelf: isSelfChat ? "1" : "",
+              },
+            })
+          }
+          className="flex-1 flex-row items-center gap-3 active:opacity-70"
+        >
+          <View className="relative">
+            {avatar ? (
+              <Image source={avatar} style={{ width: 36, height: 36, borderRadius: 999 }} />
+            ) : (
+              <View className="size-9 items-center justify-center rounded-full bg-surface-light">
+                <Text className="text-sm font-semibold text-primary">
+                  {name[0]?.toUpperCase() ?? "?"}
+                </Text>
+              </View>
+            )}
+            {isOnline && (
+              <View className="absolute bottom-0 right-0 size-3 rounded-full border-2 border-surface bg-green-500" />
+            )}
+          </View>
 
-        <View className="flex-1">
-          <Text className="text-lg font-semibold text-foreground" numberOfLines={1}>
-            {name}
-            {isSelfChat ? <Text className="text-subtle-foreground"> (You)</Text> : null}
-          </Text>
-          {!isConnected ? (
-            <Text className="text-xs text-primary">Connecting…</Text>
-          ) : isParticipantTyping ? (
-            <Text className="text-xs text-primary italic">typing…</Text>
-          ) : isSelfChat ? (
-            <Text className="text-xs text-subtle-foreground">Message yourself</Text>
-          ) : isOnline ? (
-            <Text className="text-xs text-subtle-foreground">Online</Text>
-          ) : null}
-        </View>
+          <View className="flex-1">
+            <Text className="text-lg font-semibold text-foreground" numberOfLines={1}>
+              {name}
+              {isSelfChat ? <Text className="text-subtle-foreground"> (You)</Text> : null}
+            </Text>
+            {!isConnected ? (
+              <Text className="text-xs text-primary">Connecting…</Text>
+            ) : isParticipantTyping ? (
+              <Text className="text-xs text-primary italic">typing…</Text>
+            ) : isSelfChat ? (
+              <Text className="text-xs text-subtle-foreground">Message yourself</Text>
+            ) : isOnline ? (
+              <Text className="text-xs text-subtle-foreground">Online</Text>
+            ) : null}
+          </View>
+        </Pressable>
       </View>
 
       <KeyboardAvoidingView

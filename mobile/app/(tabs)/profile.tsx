@@ -7,7 +7,6 @@ import * as ImagePicker from "expo-image-picker";
 import * as Sentry from "@sentry/react-native";
 import { useQueryClient } from "@tanstack/react-query";
 import { useAuthCallback } from "@/hooks/useAuth";
-import { useDeleteAllChats } from "@/hooks/useChats";
 import { ON_PRIMARY, useThemeColors, useThemePreference } from "@/lib/theme";
 
 // `id` is a stable key the render logic below uses to special-case the
@@ -71,26 +70,6 @@ const ProfileTab = () => {
   const { mutateAsync: syncUser } = useAuthCallback();
   const queryClient = useQueryClient();
   const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
-  const { mutate: deleteAllChats, isPending: isDeletingAllChats } = useDeleteAllChats();
-
-  const handleDeleteAllChats = () => {
-    Alert.alert(
-      "Delete all chats?",
-      "Every conversation will be removed from your chat list. Anyone who messages you again will reappear there.",
-      [
-        {
-          text: "Delete All",
-          style: "destructive",
-          onPress: () =>
-            deleteAllChats(undefined, {
-              onError: () =>
-                Alert.alert("Could not delete chats", "Something went wrong. Please try again."),
-            }),
-        },
-        { text: "Cancel", style: "cancel" },
-      ],
-    );
-  };
 
   const pickAndUploadAvatar = async (source: "camera" | "library") => {
     if (!user) return;
@@ -249,25 +228,9 @@ const ProfileTab = () => {
         </View>
       ))}
 
-      {/* Delete All Chats */}
-      <Pressable
-        className="mx-5 mt-8 bg-red-500/10 rounded-2xl py-4 items-center active:opacity-70 border border-red-500/20"
-        onPress={handleDeleteAllChats}
-        disabled={isDeletingAllChats}
-      >
-        <View className="flex-row items-center">
-          {isDeletingAllChats ? (
-            <ActivityIndicator size="small" color="#EF4444" />
-          ) : (
-            <Ionicons name="trash-outline" size={20} color="#EF4444" />
-          )}
-          <Text className="ml-2 text-red-500 font-semibold">Delete All Chats</Text>
-        </View>
-      </Pressable>
-
       {/* Logout Button */}
       <Pressable
-        className="mx-5 mt-3 bg-red-500/10 rounded-2xl py-4 items-center active:opacity-70 border border-red-500/20"
+        className="mx-5 mt-8 bg-red-500/10 rounded-2xl py-4 items-center active:opacity-70 border border-red-500/20"
         onPress={() => signOut()}
       >
         <View className="flex-row items-center">

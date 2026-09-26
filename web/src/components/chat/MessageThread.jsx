@@ -5,6 +5,7 @@ import { ArrowLeft, MessageCircle, RefreshCw } from 'lucide-react'
 import Avatar from '@/components/common/Avatar'
 import EmptyState from '@/components/common/EmptyState'
 import { TypingBubble } from '@/components/common/TypingBubble'
+import ChatDetailsModal from './ChatDetailsModal'
 import Composer from './Composer'
 import MessageBubble from './MessageBubble'
 import { MessageThreadSkeleton } from './MessageThreadSkeleton'
@@ -34,6 +35,7 @@ const MessageThread = ({ chatId }) => {
     !isSelfChat && participant && typingUsers.get(chatId) === participant._id
 
   const [draft, setDraft] = useState('')
+  const [showDetails, setShowDetails] = useState(false)
   const scrollRef = useRef(null)
   const isTyping = useRef(false)
   const idleTimer = useRef(null)
@@ -137,25 +139,32 @@ const MessageThread = ({ chatId }) => {
           <ArrowLeft size={20} />
         </button>
 
-        <Avatar user={participant} size={40} online={isOnline} />
+        <button
+          type="button"
+          onClick={() => setShowDetails(true)}
+          aria-label={`${participant.name} — chat details`}
+          className="flex min-w-0 flex-1 items-center gap-3 rounded-xl text-left transition-colors hover:bg-surface-card/60"
+        >
+          <Avatar user={participant} size={40} online={isOnline} />
 
-        <div className="min-w-0 flex-1">
-          <p className="truncate text-[15px] font-medium text-foreground">
-            {participant.name}
-            {isSelfChat ? <span className="text-subtle-foreground"> (You)</span> : null}
-          </p>
-          <p className="h-4 truncate text-xs">
-            {!isConnected ? (
-              <span className="text-primary">Connecting…</span>
-            ) : isParticipantTyping ? (
-              <span className="italic text-primary">typing…</span>
-            ) : isSelfChat ? (
-              <span className="text-subtle-foreground">Message yourself</span>
-            ) : isOnline ? (
-              <span className="text-subtle-foreground">Online</span>
-            ) : null}
-          </p>
-        </div>
+          <div className="min-w-0 flex-1">
+            <p className="truncate text-[15px] font-medium text-foreground">
+              {participant.name}
+              {isSelfChat ? <span className="text-subtle-foreground"> (You)</span> : null}
+            </p>
+            <p className="h-4 truncate text-xs">
+              {!isConnected ? (
+                <span className="text-primary">Connecting…</span>
+              ) : isParticipantTyping ? (
+                <span className="italic text-primary">typing…</span>
+              ) : isSelfChat ? (
+                <span className="text-subtle-foreground">Message yourself</span>
+              ) : isOnline ? (
+                <span className="text-subtle-foreground">Online</span>
+              ) : null}
+            </p>
+          </div>
+        </button>
       </div>
 
       <div ref={scrollRef} className="flex-1 overflow-y-auto px-6 py-6">
@@ -215,6 +224,12 @@ const MessageThread = ({ chatId }) => {
         canSend={canSend}
         isConnected={isConnected}
       />
+
+      <AnimatePresence>
+        {showDetails ? (
+          <ChatDetailsModal chat={chat} onClose={() => setShowDetails(false)} />
+        ) : null}
+      </AnimatePresence>
     </div>
   )
 }

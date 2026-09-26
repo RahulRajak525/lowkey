@@ -140,39 +140,3 @@ export async function deleteChat(req:AuthRequest, res:Response, next:NextFunctio
       next(error)
    }
 }
-
-/**
- * "Delete for me" applied to every chat at once — one tap in Settings rather
- * than clearing the list one conversation at a time. Same per-chat rules as
- * `deleteChat`: a chat only disappears from *this* user's list, and only
- * gets dropped from the database once every other participant has also
- * deleted their copy.
- */
-export async function deleteAllChats(req:AuthRequest, res:Response, next:NextFunction){
-   try {
-      const userId = req.userId
-      const chats = await Chat.find({participants:userId, deletedFor:{$ne:userId}})
-
-      const toHardDelete: string[] = []
-      const toSoftDelete: string[] = []
-
-      for (const chat of chats) {
-         const target = userId && wouldBeFullyDeleted(chat, userId) ? toHardDelete : toSoftDelete
-         target.push(chat._id.toString())
-      }
-
-      if (toHardDelete.length) {
-         await Message.deleteMany({chat:{$in:toHardDelete}})
-         await Chat.deleteMany({_id:{$in:toHardDelete}})
-      }
-
-      if (toSoftDelete.length) {
-         await Chat.updateMany({_id:{$in:toSoftDelete}}, {$addToSet:{deletedFor:userId}})
-      }
-
-      res.json({message:"All chats deleted", count: chats.length})
-   } catch (error) {
-      res.status(500)
-      next(error)
-   }
-}
