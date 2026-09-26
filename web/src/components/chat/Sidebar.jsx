@@ -1,5 +1,4 @@
 import { useState } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
 import { UserButton } from '@clerk/react'
 import { CloudOff, MessageSquareDashed, Plus, Search } from 'lucide-react'
 import { useChats, useDeleteChat } from '@/hooks/useChats'
@@ -11,18 +10,18 @@ import EmptyState from '@/components/common/EmptyState'
 const Sidebar = ({ onNewChat }) => {
   const { data: chats, isLoading, error, refetch } = useChats()
   const { mutate: deleteChat } = useDeleteChat()
-  const navigate = useNavigate()
-  const { chatId: openChatId } = useParams()
   const [query, setQuery] = useState('')
 
   const handleDelete = (chat) => {
     const label = chat.isSelf ? 'this chat' : `your chat with ${chat.participant.name}`
-    if (!window.confirm(`Delete ${label}? It will be removed from your list. If they message you again, it comes back.`)) {
+    const consequence = chat.isSelf
+      ? 'Every message will be cleared for you.'
+      : `Every message will be cleared for you. ${chat.participant.name} keeps their own copy, and stays in your chat list — anything they send afterwards shows up normally.`
+    if (!window.confirm(`Delete ${label}? ${consequence}`)) {
       return
     }
-    // The open thread reads from the same ["chats"] list this removes the
-    // row from, so it has to be navigated away from explicitly.
-    if (openChatId === chat._id) navigate('/chats')
+    // The row stays exactly where it is — this only clears its messages,
+    // so there is nothing to navigate away from even if it's open.
     deleteChat(chat._id)
   }
 

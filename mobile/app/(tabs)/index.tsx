@@ -44,7 +44,9 @@ const ChatsTab = () => {
   const handleChatLongPress = (chat: ChatWithParticipant) => {
     Alert.alert(
       chat.isSelf ? "Delete this chat?" : `Delete chat with ${chat.participant.name}?`,
-      "It will be removed from your chat list. If they message you again, it comes back.",
+      chat.isSelf
+        ? "Every message will be cleared for you."
+        : `Every message will be cleared for you. ${chat.participant.name} keeps their own copy, and stays in your chat list — anything they send afterwards shows up normally.`,
       [
         { text: "Delete", style: "destructive", onPress: () => deleteChat(chat._id) },
         { text: "Cancel", style: "cancel" },

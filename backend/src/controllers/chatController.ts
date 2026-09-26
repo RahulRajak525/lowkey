@@ -20,11 +20,19 @@ function formatChat(chat: any, userId: string | undefined) {
    const self = chat.participants.find((p: any) => p?._id.toString() === userId)
    const otherParticipant = chat.participants.find((p: any) => p?._id.toString() !== userId)
 
+   // `chat.lastMessage` is one shared field, but a message can be hidden for
+   // just this viewer (deleteChat clears "for me" only) — so it is only
+   // handed back if *this* user hasn't deleted it, and the client already
+   // renders a missing lastMessage as "No messages yet".
+   const lastMessageHiddenForMe = chat.lastMessage?.deletedFor?.some(
+      (id: any) => id.toString() === userId,
+   )
+
    return {
       _id: chat._id,
       participant: (isSelfChat(chat) ? self : otherParticipant) ?? null,
       isSelf: isSelfChat(chat),
-      lastMessage: chat.lastMessage,
+      lastMessage: lastMessageHiddenForMe ? null : chat.lastMessage,
       lastMessageAt: chat.lastMessageAt,
       createdAt: chat.createdAt
    }
@@ -33,10 +41,9 @@ function formatChat(chat: any, userId: string | undefined) {
 export async function getChats(req:AuthRequest, res:Response, next:NextFunction){
    try {
     const userId = req.userId
-      // A chat this user deleted "for me" is excluded here but not dropped
-      // from the database — send-message clears deletedFor when the other
-      // side messages again, which is what brings it back.
-      const chats = await Chat.find({participants:userId, deletedFor:{$ne:userId}})
+      // Chats are never hidden for one side — deleting one only clears its
+      // messages (see deleteChat) — so every chat the user is in is listed.
+      const chats = await Chat.find({participants:userId})
        .populate("participants", "name email avatar")
        .populate("lastMessage").sort({lastMessageAt:-1})
 
@@ -79,13 +86,6 @@ export async function getOrCreateChat(req:AuthRequest, res:Response, next:NextFu
          const newChat = new Chat({participants : isSelf ? [userId] : [userId , participantId]})
          await newChat.save()
          chat  = await newChat.populate("participants","name email avatar")
-
-       } else if (userId && chat.deletedFor.some((id) => id.toString() === userId)) {
-         // Picking this person again after having deleted the chat means
-         // starting over, so it un-hides for this user (only) rather than
-         // staying gone until the other side happens to message first.
-         chat.deletedFor = chat.deletedFor.filter((id) => id.toString() !== userId)
-         await chat.save()
        }
 
        res.json(formatChat(chat, userId))
@@ -97,17 +97,13 @@ export async function getOrCreateChat(req:AuthRequest, res:Response, next:NextFu
 }
 
 /**
- * Whether deleting this chat "for me" would leave nobody else holding onto
- * it — i.e. every other participant already has. Shared by the single- and
- * bulk-delete routes so the "nothing left to keep, drop it for good" rule
- * only lives in one place.
+ * "Delete Chat" clears every message in the conversation *for this user
+ * only* (reusing the same per-message `deletedFor` a single message delete
+ * uses) — the chat row, the contact, and the other participant's copy are
+ * all untouched. Because old messages stay marked hidden-for-me rather than
+ * being un-hidden, a message the other side sends afterwards shows up on its
+ * own without dragging the cleared history back into view.
  */
-function wouldBeFullyDeleted(chat: { participants: Types.ObjectId[]; deletedFor: Types.ObjectId[] }, userId: string) {
-   return chat.participants
-      .filter((id) => id.toString() !== userId)
-      .every((id) => chat.deletedFor.some((deletedId) => deletedId.toString() === id.toString()))
-}
-
 export async function deleteChat(req:AuthRequest, res:Response, next:NextFunction){
    try {
       const userId = req.userId
@@ -124,17 +120,9 @@ export async function deleteChat(req:AuthRequest, res:Response, next:NextFunctio
          return
       }
 
-      if (userId && wouldBeFullyDeleted(chat, userId)) {
-         // Every participant has now deleted it (a self chat clears this
-         // immediately, since there is no "other side" to wait on) — nothing
-         // left to keep, so the conversation is dropped for good.
-         await Message.deleteMany({chat:chatId})
-         await chat.deleteOne()
-      } else {
-         await Chat.updateOne({_id:chatId}, {$addToSet:{deletedFor:userId}})
-      }
+      await Message.updateMany({chat:chatId}, {$addToSet:{deletedFor:userId}})
 
-      res.json({message:"Chat deleted"})
+      res.json({message:"Chat cleared"})
    } catch (error) {
       res.status(500)
       next(error)

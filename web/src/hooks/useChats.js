@@ -1,4 +1,5 @@
 import { useApi } from '@/lib/axios'
+import { messagesQueryKey } from '@/hooks/useMessages'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 
 export const useChats = () => {
@@ -30,8 +31,11 @@ export const useGetOrCreateChat = () => {
 }
 
 /**
- * "Delete for me" only — the row disappears from this user's list, but
- * reappears (server side) the moment the other person sends a new message.
+ * Clears every message in the chat "for me" only — the row stays in the
+ * list (and on the other participant's side) exactly as it was; only this
+ * device's view of the conversation empties out. A message they send
+ * afterwards shows up on its own, since the cleared history stays hidden
+ * rather than being restored.
  */
 export const useDeleteChat = () => {
   const { apiWithAuth } = useApi()
@@ -42,8 +46,9 @@ export const useDeleteChat = () => {
       return chatId
     },
     onSuccess: (chatId) => {
+      queryClient.setQueryData(messagesQueryKey(chatId), [])
       queryClient.setQueryData(['chats'], (previous) =>
-        previous?.filter((chat) => chat._id !== chatId),
+        previous?.map((chat) => (chat._id === chatId ? { ...chat, lastMessage: null } : chat)),
       )
     },
   })

@@ -84,10 +84,6 @@ export const initializeSocket = (httpServer: HttpServer) => {
 
           chat.lastMessage = message._id;
           chat.lastMessageAt = new Date();
-          // Anyone who had deleted this chat "for me" gets it back now that
-          // there is new activity in it, same as the other side reappearing
-          // in their list.
-          chat.deletedFor = [];
           await chat.save();
 
           await message.populate("sender", "name avatar");

@@ -1,4 +1,3 @@
-import { useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { Trash2, X } from 'lucide-react'
 import Avatar from '@/components/common/Avatar'
@@ -6,29 +5,24 @@ import { useDeleteChat } from '@/hooks/useChats'
 
 /**
  * Opened by clicking the contact in a thread's header — a clearly-labelled
- * place to delete *that one* conversation, rather than only the hover icon
- * on the chat list row.
+ * place to clear *that one* conversation's history for yourself, rather
+ * than only the hover icon on the chat list row.
  */
 const ChatDetailsModal = ({ chat, onClose }) => {
-  const navigate = useNavigate()
   const { mutate: deleteChat, isPending } = useDeleteChat()
   const participant = chat.participant
 
   const handleDeleteChat = () => {
     const label = chat.isSelf ? 'this chat' : `your chat with ${participant.name}`
-    if (
-      !window.confirm(
-        `Delete ${label}? Every message in this conversation will be removed from your list. If they message you again, it comes back.`,
-      )
-    ) {
+    const consequence = chat.isSelf
+      ? 'Every message will be cleared for you.'
+      : `Every message will be cleared for you. ${participant.name} keeps their own copy, and stays in your chat list — anything they send afterwards shows up normally.`
+    if (!window.confirm(`Delete ${label}? ${consequence}`)) {
       return
     }
-    deleteChat(chat._id, {
-      onSuccess: () => {
-        onClose()
-        navigate('/chats')
-      },
-    })
+    // The chat row and its history stay put — just close the panel and let
+    // the now-cleared thread show through.
+    deleteChat(chat._id, { onSuccess: onClose })
   }
 
   return (
@@ -86,8 +80,8 @@ const ChatDetailsModal = ({ chat, onClose }) => {
             <p className="font-medium text-red-400">Delete Chat</p>
             <p className="mt-0.5 text-xs text-subtle-foreground">
               {chat.isSelf
-                ? 'Removes this conversation from your chat list.'
-                : `Removes your entire conversation with ${participant.name}.`}
+                ? 'Clears every message in this conversation, for you.'
+                : `Clears every message with ${participant.name}, for you only.`}
             </p>
           </div>
         </button>

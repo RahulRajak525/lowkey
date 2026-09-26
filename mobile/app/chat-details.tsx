@@ -11,8 +11,8 @@ const first = (value: string | string[] | undefined) =>
 
 /**
  * Reached by tapping the contact in a chat's header — a clearly-labelled
- * place to delete *that one* conversation, rather than only a long-press
- * gesture on the chat list.
+ * place to clear *that one* conversation's history for yourself, rather
+ * than only a long-press gesture on the chat list.
  */
 export default function ChatDetailsScreen() {
   const router = useRouter();
@@ -33,16 +33,18 @@ export default function ChatDetailsScreen() {
   const handleDeleteChat = () => {
     Alert.alert(
       isSelf ? "Delete this chat?" : `Delete chat with ${name}?`,
-      "Every message in this conversation will be removed from your chat list. If they message you again, it comes back.",
+      isSelf
+        ? "Every message will be cleared for you."
+        : `Every message will be cleared for you. ${name} keeps their own copy, and stays in your chat list — anything they send afterwards shows up normally.`,
       [
         {
           text: "Delete",
           style: "destructive",
           onPress: () =>
             deleteChat(chatId, {
-              // Both this screen and the thread behind it are stacked on top
-              // of the chat list — deleting the chat should return past both.
-              onSuccess: () => router.dismissAll(),
+              // The chat row and its history stay put — only this screen
+              // needs to close, landing back on the now-cleared thread.
+              onSuccess: () => router.back(),
               onError: () =>
                 Alert.alert("Could not delete chat", "Something went wrong. Please try again."),
             }),
@@ -99,8 +101,8 @@ export default function ChatDetailsScreen() {
             <Text className="font-medium text-red-500">Delete Chat</Text>
             <Text className="mt-0.5 text-xs text-subtle-foreground">
               {isSelf
-                ? "Removes this conversation from your chat list."
-                : `Removes your entire conversation with ${name}.`}
+                ? "Clears every message in this conversation, for you."
+                : `Clears every message with ${name}, for you only.`}
             </Text>
           </View>
         </Pressable>
