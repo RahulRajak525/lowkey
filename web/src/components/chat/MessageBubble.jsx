@@ -19,7 +19,7 @@ const MessageBubble = ({ message, isMine }) => (
     className={`flex w-full flex-col ${isMine ? 'items-end' : 'items-start'}`}
   >
     <div
-      className={`max-w-[70%] px-4 py-2.5 text-[15px] leading-relaxed break-words ${
+      className={`max-w-[min(70%,32rem)] px-4 py-2.5 text-[15px] leading-relaxed break-words ${
         isMine
           ? 'rounded-2xl rounded-br-md bg-gradient-to-br from-primary-light to-primary-dark text-surface-dark'
           : 'rounded-2xl rounded-bl-md bg-surface-card text-foreground'

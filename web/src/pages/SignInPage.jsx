@@ -45,8 +45,8 @@ const SignInPage = () => (
   <div className="relative flex min-h-screen w-full flex-col overflow-hidden bg-surface-dark lg:flex-row">
     <AuroraBackground />
 
-    <div className="relative z-10 flex flex-1 flex-col justify-between px-8 py-10 lg:px-16 lg:py-14">
-      <div className="flex items-center gap-2.5">
+    <div className="relative z-10 order-2 flex flex-1 flex-col justify-between px-8 py-10 lg:order-1 lg:px-16 lg:py-14">
+      <div className="hidden items-center gap-2.5 lg:flex">
         <div className="flex size-9 items-center justify-center rounded-xl bg-gradient-to-br from-primary-light to-primary-dark">
           <MessageCircle size={18} className="text-surface-dark" strokeWidth={2.5} />
         </div>
@@ -57,7 +57,7 @@ const SignInPage = () => (
         initial={{ opacity: 0, y: 16 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5, ease: 'easeOut' }}
-        className="max-w-lg py-16 lg:py-0"
+        className="max-w-lg py-12 lg:py-0"
       >
         <h1 className="font-display text-4xl font-semibold leading-tight text-foreground sm:text-5xl">
           Conversations, <span className="gradient-text">reimagined.</span>
@@ -89,8 +89,15 @@ const SignInPage = () => (
       initial={{ opacity: 0, x: 16 }}
       animate={{ opacity: 1, x: 0 }}
       transition={{ duration: 0.5, ease: 'easeOut', delay: 0.1 }}
-      className="relative z-10 flex flex-1 items-center justify-center px-6 pb-14 lg:pb-6"
+      className="relative z-10 order-1 flex flex-1 flex-col items-center justify-center gap-6 px-6 py-10 lg:order-2 lg:py-6"
     >
+      <div className="flex items-center gap-2.5 lg:hidden">
+        <div className="flex size-9 items-center justify-center rounded-xl bg-gradient-to-br from-primary-light to-primary-dark">
+          <MessageCircle size={18} className="text-surface-dark" strokeWidth={2.5} />
+        </div>
+        <span className="font-display text-xl font-semibold text-foreground">Whisper</span>
+      </div>
+
       <div className="glass-panel w-full max-w-sm rounded-3xl p-2 shadow-2xl shadow-black/40 sm:p-4">
         <SignIn routing="path" path="/" appearance={clerkAppearance} />
       </div>
