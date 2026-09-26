@@ -64,9 +64,9 @@ export default function SSOCallbackScreen() {
   }, [authLoaded, isSignedIn, hookFlowActive, router])
 
   return (
-    <View className="flex-1 items-center justify-center gap-4 bg-[#0D0D0F]">
+    <View className="flex-1 items-center justify-center gap-4 bg-surface-dark">
       <ActivityIndicator size="large" color="#F4A261" />
-      <Text className="text-base text-[#A0A0A5]">Signing you in…</Text>
+      <Text className="text-base text-muted-foreground">Signing you in…</Text>
     </View>
   )
 }

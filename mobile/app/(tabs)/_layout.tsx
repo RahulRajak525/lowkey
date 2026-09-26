@@ -3,13 +3,15 @@ import { Redirect, Tabs } from 'expo-router'
 import { Ionicons } from '@expo/vector-icons'
 import { useAuth } from '@clerk/expo'
 import { ActivityIndicator, View } from 'react-native'
+import { useThemeColors } from '@/lib/theme'
 
 const TabsLayout = () => {
   const { isLoaded, isSignedIn } = useAuth()
+  const colors = useThemeColors()
 
   if (!isLoaded) {
     return (
-      <View className="flex-1 items-center justify-center bg-[#0D0D0F]">
+      <View className="flex-1 items-center justify-center bg-surface-dark">
         <ActivityIndicator size="large" color="#F4A261" />
       </View>
     )
@@ -25,16 +27,16 @@ const TabsLayout = () => {
       screenOptions={{
         headerShown: false,
         tabBarActiveTintColor: '#F4A261',
-        tabBarInactiveTintColor: '#A0A0A5',
+        tabBarInactiveTintColor: colors.mutedForeground,
         tabBarLabelStyle:{fontSize:12,fontWeight:"600"},
         tabBarStyle: {
-          backgroundColor: '#0D0D0F',
-          borderTopColor: '#2D2D30',
+          backgroundColor: colors.surfaceDark,
+          borderTopColor: colors.surfaceLight,
           borderTopWidth:1,
           height:88,
           paddingTop:8
         },
-        
+
       }}
     >
       <Tabs.Screen

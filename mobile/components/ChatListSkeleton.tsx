@@ -9,6 +9,7 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated'
 import { TypingBubble } from './TypingBubble'
+import { useThemeColors } from '@/lib/theme'
 
 const PULSE_MS = 850
 const ROW_STAGGER_MS = 110 // rows breathe in sequence, like messages landing
@@ -23,16 +24,19 @@ const ROWS = [
   { name: '35%', message: '60%' },
 ] as const
 
-const Bar = ({ width, height }: { width: `${number}%`; height: number }) => (
-  <View
-    style={{
-      width,
-      height,
-      borderRadius: height / 2,
-      backgroundColor: '#2D2D30',
-    }}
-  />
-)
+const Bar = ({ width, height }: { width: `${number}%`; height: number }) => {
+  const colors = useThemeColors()
+  return (
+    <View
+      style={{
+        width,
+        height,
+        borderRadius: height / 2,
+        backgroundColor: colors.surfaceLight,
+      }}
+    />
+  )
+}
 
 const SkeletonRow = ({
   index,
@@ -41,6 +45,7 @@ const SkeletonRow = ({
   index: number
   widths: (typeof ROWS)[number]
 }) => {
+  const colors = useThemeColors()
   const pulse = useSharedValue(0)
 
   useEffect(() => {
@@ -75,7 +80,7 @@ const SkeletonRow = ({
           width: 56,
           height: 56,
           borderRadius: 28,
-          backgroundColor: '#2D2D30',
+          backgroundColor: colors.surfaceLight,
         }}
       />
       <View className="flex-1 gap-2">

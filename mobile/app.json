@@ -39,6 +39,13 @@
       "expo-secure-store",
       "expo-web-browser",
       [
+        "expo-image-picker",
+        {
+          "photosPermission": "Allow Whisper to access your photos to set a profile picture.",
+          "cameraPermission": "Allow Whisper to access your camera to take a profile picture."
+        }
+      ],
+      [
         "@sentry/react-native/expo",
         {
           "url": "https://sentry.io/",
