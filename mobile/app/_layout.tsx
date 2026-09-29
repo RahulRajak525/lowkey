@@ -5,6 +5,7 @@ import { ClerkProvider } from '@clerk/expo';
 import { tokenCache } from '@clerk/expo/token-cache'
 import AuthSync from "../components/AuthSync";
 import SocketSync from "../components/SocketSync";
+import ServerWakeNotice from "@/components/ServerWakeNotice";
 import { StatusBar } from "expo-status-bar";
 import * as Sentry from '@sentry/react-native';
 import { useColorScheme } from "nativewind";
@@ -62,6 +63,9 @@ export default Sentry.wrap(function RootLayout() {
           options={{ presentation: "modal", animation: "slide_from_bottom", gestureEnabled: true }}
         />
       </Stack>
+      {/* After the Stack so it floats above every screen, the splash/loader
+          states included — it only talks to /health, not the authed API. */}
+      <ServerWakeNotice />
     </QueryClientProvider>
     </ClerkProvider>
   );

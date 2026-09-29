@@ -77,6 +77,7 @@ The same hooks and libs exist in both, so a feature change usually touches both.
 | Socket + presence store | lib/socket.ts | lib/socket.js |
 | Data hooks | hooks/useAuth · useChats (+useDeleteChat, useClearChat) · useMessages (+useDeleteMessage) · useUsers (useSearchUserByEmail, isLikelyEmail) | hooks/ (same) |
 | Background sync | components/AuthSync · SocketSync | components/AuthSync · SocketSync |
+| Cold-start notice | components/ServerWakeNotice (mounted in app/_layout) | components/common/ServerWakeNotice (mounted in main.jsx) |
 | Loading UI | components/TypingBubble · ChatListSkeleton · MessageThreadSkeleton | components/common/TypingBubble · chat/*Skeleton |
 | Theme | global.css (`:root` + `.dark:root`) + tailwind.config.js · lib/theme.ts | index.css `@theme` (dark only) |
 
@@ -103,6 +104,8 @@ components/chat/        Sidebar (hover trash icon on ChatListItem → delete cha
 components/common/      Avatar, EmptyState, SplashScreen, AuroraBackground, TypingBubble
 lib/types.js            senderOf, hasParticipant
 ```
+
+**ServerWakeNotice**: `whisper-api` is on Render's free plan and sleeps when idle. On every load, and when the app returns after 10+ min in the background (a hidden tab on web), both clients check `GET /health`. The "Waking up the server…" banner appears only if that takes longer than 2.5s, and changes to "Server is awake" once it answers. No flag is ever stored, so a return visit after a long break shows the banner again.
 
 ## Env vars
 - backend: `MONGODB_URI` `CLERK_PUBLISHABLE_KEY` `CLERK_SECRET_KEY` `FRONTEND_URL` `PORT`
