@@ -45,8 +45,8 @@ const ChatsTab = () => {
     Alert.alert(
       chat.isSelf ? "Delete this chat?" : `Delete chat with ${chat.participant.name}?`,
       chat.isSelf
-        ? "Every message will be cleared for you."
-        : `Every message will be cleared for you. ${chat.participant.name} keeps their own copy, and stays in your chat list — anything they send afterwards shows up normally.`,
+        ? "It will be removed from your chat list and every message cleared."
+        : `${chat.participant.name} will be removed from your chat list and every message cleared for you. They keep their own copy — if either of you sends a new message, the chat comes back.`,
       [
         { text: "Delete", style: "destructive", onPress: () => deleteChat(chat._id) },
         { text: "Cancel", style: "cancel" },

@@ -32,11 +32,31 @@ export const useGetOrCreateChat = () => {
 }
 
 /**
- * Clears every message in the chat "for me" only — the row stays in the
- * list (and on the other participant's side) exactly as it was; only this
- * device's view of the conversation empties out. A message they send
- * afterwards shows up on its own, since the cleared history stays hidden
- * rather than being restored.
+ * "Clear Chat" (Chat Details) — every message is hidden for me only; the row
+ * stays in the list (and on the other participant's side). A message they send
+ * afterwards shows up on its own, since the cleared history stays hidden.
+ */
+export const useClearChat = () => {
+  const { apiWithAuth } = useApi();
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (chatId: string) => {
+      await apiWithAuth({ method: "DELETE", url: `/chats/${chatId}/messages` });
+      return chatId;
+    },
+    onSuccess: (chatId) => {
+      queryClient.setQueryData<Message[]>(messagesQueryKey(chatId), []);
+      queryClient.setQueryData<Chat[]>(["chats"], (previous) =>
+        previous?.map((chat) => (chat._id === chatId ? { ...chat, lastMessage: null } : chat)),
+      );
+    },
+  });
+};
+
+/**
+ * "Delete Chat" (chat-list long-press) — clears the messages like
+ * useClearChat *and* removes the row from my list. It comes back (with only
+ * the new message) as soon as either side sends something.
  */
 export const useDeleteChat = () => {
   const { apiWithAuth } = useApi();
@@ -49,7 +69,7 @@ export const useDeleteChat = () => {
     onSuccess: (chatId) => {
       queryClient.setQueryData<Message[]>(messagesQueryKey(chatId), []);
       queryClient.setQueryData<Chat[]>(["chats"], (previous) =>
-        previous?.map((chat) => (chat._id === chatId ? { ...chat, lastMessage: null } : chat)),
+        previous?.filter((chat) => chat._id !== chatId),
       );
     },
   });

@@ -41,9 +41,9 @@ function formatChat(chat: any, userId: string | undefined) {
 export async function getChats(req:AuthRequest, res:Response, next:NextFunction){
    try {
     const userId = req.userId
-      // Chats are never hidden for one side — deleting one only clears its
-      // messages (see deleteChat) — so every chat the user is in is listed.
-      const chats = await Chat.find({participants:userId})
+      // Chats this user removed from their list (deleteChat) are skipped
+      // until a new message un-hides them (send-message in socket.ts).
+      const chats = await Chat.find({participants:userId, hiddenFor:{$ne:userId}})
        .populate("participants", "name email avatar")
        .populate("lastMessage").sort({lastMessageAt:-1})
 
@@ -79,7 +79,9 @@ export async function getOrCreateChat(req:AuthRequest, res:Response, next:NextFu
          ? { participants: [userId] }
          : { participants: { $all: [userId, participantId] } }
 
-      let chat = await Chat.findOne(query)
+      // Starting a chat with someone you'd removed from your list puts the
+      // row back (still without the history you cleared).
+      let chat = await Chat.findOneAndUpdate(query, {$pull:{hiddenFor:userId}}, {new:true})
       .populate("participants", "name email avatar")
        .populate("lastMessage")
        if(!chat){
@@ -96,33 +98,59 @@ export async function getOrCreateChat(req:AuthRequest, res:Response, next:NextFu
    }
 }
 
+/** Loads a chat the requester is in, or answers 400/404 and returns null. */
+async function findOwnChat(req:AuthRequest, res:Response){
+   const { chatId } = req.params
+
+   if(typeof chatId !== "string" || !Types.ObjectId.isValid(chatId)){
+      res.status(400).json({message:"Invalid chat ID"})
+      return null
+   }
+
+   const chat = await Chat.findOne({_id:chatId, participants:req.userId})
+   if(!chat){
+      res.status(404).json({message:"Chat not found"})
+      return null
+   }
+   return chat
+}
+
 /**
- * "Delete Chat" clears every message in the conversation *for this user
- * only* (reusing the same per-message `deletedFor` a single message delete
- * uses) — the chat row, the contact, and the other participant's copy are
- * all untouched. Because old messages stay marked hidden-for-me rather than
- * being un-hidden, a message the other side sends afterwards shows up on its
- * own without dragging the cleared history back into view.
+ * "Clear Chat" (Chat Details) — hides every message in the conversation *for
+ * this user only*, reusing the per-message `deletedFor` a single message
+ * delete uses. The chat row stays in their list, and the other participant's
+ * copy is untouched. Old messages stay hidden rather than being restored, so
+ * anything sent afterwards shows up on its own.
+ */
+export async function clearChat(req:AuthRequest, res:Response, next:NextFunction){
+   try {
+      const chat = await findOwnChat(req, res)
+      if(!chat) return
+
+      await Message.updateMany({chat:chat._id}, {$addToSet:{deletedFor:req.userId}})
+
+      res.json({message:"Chat cleared"})
+   } catch (error) {
+      res.status(500)
+      next(error)
+   }
+}
+
+/**
+ * "Delete Chat" (chat-list long-press / hover) — clears the messages exactly
+ * like clearChat *and* removes the row from this user's list. Nothing changes
+ * for the other participant; if either side sends a new message the row comes
+ * back, showing only that new message.
  */
 export async function deleteChat(req:AuthRequest, res:Response, next:NextFunction){
    try {
-      const userId = req.userId
-      const { chatId } = req.params
+      const chat = await findOwnChat(req, res)
+      if(!chat) return
 
-      if(typeof chatId !== "string" || !Types.ObjectId.isValid(chatId)){
-         res.status(400).json({message:"Invalid chat ID"})
-         return
-      }
+      await Message.updateMany({chat:chat._id}, {$addToSet:{deletedFor:req.userId}})
+      await Chat.updateOne({_id:chat._id}, {$addToSet:{hiddenFor:req.userId}})
 
-      const chat = await Chat.findOne({_id:chatId, participants:userId})
-      if(!chat){
-         res.status(404).json({message:"Chat not found"})
-         return
-      }
-
-      await Message.updateMany({chat:chatId}, {$addToSet:{deletedFor:userId}})
-
-      res.json({message:"Chat cleared"})
+      res.json({message:"Chat deleted"})
    } catch (error) {
       res.status(500)
       next(error)

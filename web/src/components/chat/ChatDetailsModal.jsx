@@ -1,28 +1,28 @@
 import { motion } from 'framer-motion'
 import { Trash2, X } from 'lucide-react'
 import Avatar from '@/components/common/Avatar'
-import { useDeleteChat } from '@/hooks/useChats'
+import { useClearChat } from '@/hooks/useChats'
 
 /**
- * Opened by clicking the contact in a thread's header — a clearly-labelled
- * place to clear *that one* conversation's history for yourself, rather
- * than only the hover icon on the chat list row.
+ * Opened by clicking the contact in a thread's header — clears *that one*
+ * conversation's history for yourself while keeping the contact in your chat
+ * list. (Removing the row too is the chat list's hover "Delete".)
  */
 const ChatDetailsModal = ({ chat, onClose }) => {
-  const { mutate: deleteChat, isPending } = useDeleteChat()
+  const { mutate: clearChat, isPending } = useClearChat()
   const participant = chat.participant
 
-  const handleDeleteChat = () => {
+  const handleClearChat = () => {
     const label = chat.isSelf ? 'this chat' : `your chat with ${participant.name}`
     const consequence = chat.isSelf
-      ? 'Every message will be cleared for you.'
-      : `Every message will be cleared for you. ${participant.name} keeps their own copy, and stays in your chat list — anything they send afterwards shows up normally.`
-    if (!window.confirm(`Delete ${label}? ${consequence}`)) {
+      ? 'Every message will be cleared. The chat stays in your list.'
+      : `Every message will be cleared for you. ${participant.name} keeps their own copy, and stays in your chat list.`
+    if (!window.confirm(`Clear ${label}? ${consequence}`)) {
       return
     }
     // The chat row and its history stay put — just close the panel and let
     // the now-cleared thread show through.
-    deleteChat(chat._id, { onSuccess: onClose })
+    clearChat(chat._id, { onSuccess: onClose })
   }
 
   return (
@@ -69,7 +69,7 @@ const ChatDetailsModal = ({ chat, onClose }) => {
         </p>
         <button
           type="button"
-          onClick={handleDeleteChat}
+          onClick={handleClearChat}
           disabled={isPending}
           className="flex w-full items-center gap-3 rounded-2xl border border-red-500/20 bg-red-500/10 px-4 py-3.5 text-left transition-colors hover:bg-red-500/15 disabled:opacity-50"
         >
@@ -77,11 +77,11 @@ const ChatDetailsModal = ({ chat, onClose }) => {
             <Trash2 size={18} className="text-red-400" />
           </div>
           <div className="min-w-0 flex-1">
-            <p className="font-medium text-red-400">Delete Chat</p>
+            <p className="font-medium text-red-400">Clear Chat</p>
             <p className="mt-0.5 text-xs text-subtle-foreground">
               {chat.isSelf
-                ? 'Clears every message in this conversation, for you.'
-                : `Clears every message with ${participant.name}, for you only.`}
+                ? 'Clears every message in this conversation. The chat stays in your list.'
+                : `Clears every message with ${participant.name}, for you only. ${participant.name} stays in your list.`}
             </p>
           </div>
         </button>

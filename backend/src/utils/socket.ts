@@ -84,6 +84,10 @@ export const initializeSocket = (httpServer: HttpServer) => {
 
           chat.lastMessage = message._id;
           chat.lastMessageAt = new Date();
+          // Anyone who removed this chat from their list gets it back now
+          // that there's new activity — only the new message shows, since the
+          // history they cleared stays hidden per message.
+          chat.hiddenFor = [];
           await chat.save();
 
           await message.populate("sender", "name avatar");

@@ -1,4 +1,4 @@
-import { useDeleteChat } from "@/hooks/useChats";
+import { useClearChat } from "@/hooks/useChats";
 import { Ionicons } from "@expo/vector-icons";
 import { Image } from "expo-image";
 import { useLocalSearchParams, useRouter } from "expo-router";
@@ -10,9 +10,9 @@ const first = (value: string | string[] | undefined) =>
   Array.isArray(value) ? value[0] : value;
 
 /**
- * Reached by tapping the contact in a chat's header — a clearly-labelled
- * place to clear *that one* conversation's history for yourself, rather
- * than only a long-press gesture on the chat list.
+ * Reached by tapping the contact in a chat's header — clears *that one*
+ * conversation's history for yourself while keeping the contact in your chat
+ * list. (Removing the row too is the chat list's long-press "Delete".)
  */
 export default function ChatDetailsScreen() {
   const router = useRouter();
@@ -28,25 +28,25 @@ export default function ChatDetailsScreen() {
   const avatar = first(params.avatar);
   const isSelf = first(params.isSelf) === "1";
 
-  const { mutate: deleteChat, isPending } = useDeleteChat();
+  const { mutate: clearChat, isPending } = useClearChat();
 
-  const handleDeleteChat = () => {
+  const handleClearChat = () => {
     Alert.alert(
-      isSelf ? "Delete this chat?" : `Delete chat with ${name}?`,
+      isSelf ? "Clear this chat?" : `Clear chat with ${name}?`,
       isSelf
-        ? "Every message will be cleared for you."
-        : `Every message will be cleared for you. ${name} keeps their own copy, and stays in your chat list — anything they send afterwards shows up normally.`,
+        ? "Every message will be cleared. The chat stays in your list."
+        : `Every message will be cleared for you. ${name} keeps their own copy, and stays in your chat list.`,
       [
         {
-          text: "Delete",
+          text: "Clear",
           style: "destructive",
           onPress: () =>
-            deleteChat(chatId, {
+            clearChat(chatId, {
               // The chat row and its history stay put — only this screen
               // needs to close, landing back on the now-cleared thread.
               onSuccess: () => router.back(),
               onError: () =>
-                Alert.alert("Could not delete chat", "Something went wrong. Please try again."),
+                Alert.alert("Could not clear chat", "Something went wrong. Please try again."),
             }),
         },
         { text: "Cancel", style: "cancel" },
@@ -91,18 +91,18 @@ export default function ChatDetailsScreen() {
         </Text>
         <Pressable
           className="flex-row items-center rounded-2xl border border-red-500/20 bg-red-500/10 px-4 py-3.5 active:opacity-70"
-          onPress={handleDeleteChat}
+          onPress={handleClearChat}
           disabled={isPending}
         >
           <View className="size-9 items-center justify-center rounded-xl bg-red-500/20">
             <Ionicons name="trash-outline" size={20} color="#EF4444" />
           </View>
           <View className="ml-3 flex-1">
-            <Text className="font-medium text-red-500">Delete Chat</Text>
+            <Text className="font-medium text-red-500">Clear Chat</Text>
             <Text className="mt-0.5 text-xs text-subtle-foreground">
               {isSelf
-                ? "Clears every message in this conversation, for you."
-                : `Clears every message with ${name}, for you only.`}
+                ? "Clears every message in this conversation. The chat stays in your list."
+                : `Clears every message with ${name}, for you only. ${name} stays in your list.`}
             </Text>
           </View>
         </Pressable>
