@@ -129,7 +129,7 @@ const ServerWakeNotice = () => {
             <View className="flex-1">
               <Text className="text-sm font-semibold text-foreground">Waking up the server…</Text>
               <Text className="mt-0.5 text-xs text-subtle-foreground">
-                Whisper runs on a free server that naps when idle. This can take up to a minute —
+                LowKey runs on a free server that naps when idle. This can take up to a minute —
                 thanks for your patience!
               </Text>
             </View>

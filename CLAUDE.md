@@ -1,7 +1,13 @@
-# Whisper — project map
+# LowKey — project map
 
 Real-time 1:1 chat app. Use this map to go straight to the files a task touches
 instead of scanning the repo. **Update this file when adding, moving or deleting files.**
+
+**Naming:** the user-facing name is **LowKey** (web/mobile UI, `<title>`, `expo.name`, Android
+`app_name`). The old tutorial name "whisper" deliberately stays in infra/identifiers: the repo,
+Render services + URL (`whisper-api` / `whisper-web-tjgh.onrender.com`), bundle id
+`com.treerootinformatics.whisper`, Sentry project, backend. Don't "fix" those; renaming them
+breaks the deployed URL, Clerk native config and Sentry uploads. Expo `slug`/`scheme` stay `mobile`.
 
 ## Stack
 | Part | Tech | Run |

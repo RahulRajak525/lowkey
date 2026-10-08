@@ -6,7 +6,7 @@ const SplashScreen = () => (
   <div className="relative flex h-screen w-screen items-center justify-center bg-surface-dark">
     <AuroraBackground />
     <div className="relative flex flex-col items-center gap-4">
-      <span className="font-display text-2xl font-semibold gradient-text">Whisper</span>
+      <span className="font-display text-2xl font-semibold gradient-text">LowKey</span>
       <TypingBubble dotColor="var(--color-primary)" />
     </div>
   </div>

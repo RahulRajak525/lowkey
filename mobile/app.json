@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "mobile",
+    "name": "LowKey",
     "slug": "mobile",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -41,8 +41,8 @@
       [
         "expo-image-picker",
         {
-          "photosPermission": "Allow Whisper to access your photos to set a profile picture.",
-          "cameraPermission": "Allow Whisper to access your camera to take a profile picture."
+          "photosPermission": "Allow LowKey to access your photos to set a profile picture.",
+          "cameraPermission": "Allow LowKey to access your camera to take a profile picture."
         }
       ],
       [

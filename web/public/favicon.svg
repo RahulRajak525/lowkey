@@ -1,12 +1,12 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 48 48" fill="none">
   <defs>
-    <linearGradient id="whisper-mark" x1="4" y1="4" x2="44" y2="44" gradientUnits="userSpaceOnUse">
+    <linearGradient id="lowkey-mark" x1="4" y1="4" x2="44" y2="44" gradientUnits="userSpaceOnUse">
       <stop offset="0" stop-color="#F4B183"/>
       <stop offset="1" stop-color="#E76F51"/>
     </linearGradient>
   </defs>
   <rect x="2" y="2" width="44" height="44" rx="14" fill="#0D0D0F"/>
-  <path d="M24 9c-7.732 0-14 5.85-14 13.07 0 3.94 1.87 7.47 4.83 9.86-.16 1.9-.78 3.55-1.83 4.9a.75.75 0 0 0 .78 1.19c2.62-.6 4.85-1.77 6.6-3.2 1.14.27 2.34.41 3.6.41 7.732 0 14-5.85 14-13.16S31.732 9 24 9Z" fill="url(#whisper-mark)"/>
+  <path d="M24 9c-7.732 0-14 5.85-14 13.07 0 3.94 1.87 7.47 4.83 9.86-.16 1.9-.78 3.55-1.83 4.9a.75.75 0 0 0 .78 1.19c2.62-.6 4.85-1.77 6.6-3.2 1.14.27 2.34.41 3.6.41 7.732 0 14-5.85 14-13.16S31.732 9 24 9Z" fill="url(#lowkey-mark)"/>
   <circle cx="17.5" cy="22.5" r="2.15" fill="#0D0D0F"/>
   <circle cx="24" cy="22.5" r="2.15" fill="#0D0D0F"/>
   <circle cx="30.5" cy="22.5" r="2.15" fill="#0D0D0F"/>

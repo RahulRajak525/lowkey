@@ -50,7 +50,7 @@ const SignInPage = () => (
         <div className="flex size-9 items-center justify-center rounded-xl bg-gradient-to-br from-primary-light to-primary-dark">
           <MessageCircle size={18} className="text-surface-dark" strokeWidth={2.5} />
         </div>
-        <span className="font-display text-xl font-semibold text-foreground">Whisper</span>
+        <span className="font-display text-xl font-semibold text-foreground">LowKey</span>
       </div>
 
       <motion.div
@@ -82,7 +82,7 @@ const SignInPage = () => (
         </div>
       </motion.div>
 
-      <p className="text-xs text-subtle-foreground">Whisper &middot; real-time messaging</p>
+      <p className="text-xs text-subtle-foreground">LowKey &middot; real-time messaging</p>
     </div>
 
     <motion.div
@@ -95,7 +95,7 @@ const SignInPage = () => (
         <div className="flex size-9 items-center justify-center rounded-xl bg-gradient-to-br from-primary-light to-primary-dark">
           <MessageCircle size={18} className="text-surface-dark" strokeWidth={2.5} />
         </div>
-        <span className="font-display text-xl font-semibold text-foreground">Whisper</span>
+        <span className="font-display text-xl font-semibold text-foreground">LowKey</span>
       </div>
 
       <div className="glass-panel w-full max-w-sm rounded-3xl p-2 shadow-2xl shadow-black/40 sm:p-4">

@@ -37,7 +37,7 @@ export default function AuthLandingScreen() {
 
          <View className="items-center pt-10">
           <Image source={require('../../assets/images/logo.png')}  style={{ width: 100, height: 100 , marginVertical: -10 }} contentFit='contain' />
-              <Text className="mb-4 text-center text-4xl font-bold text-primary font-serif tracking-wider uppercase " >Whisper</Text>
+              <Text className="mb-4 text-center text-4xl font-bold text-primary font-serif tracking-wider uppercase " >LowKey</Text>
          </View>
          {/* CENTER SECTION - HERO IMG */}
          <View className="flex-1 items-center justify-center px-6">

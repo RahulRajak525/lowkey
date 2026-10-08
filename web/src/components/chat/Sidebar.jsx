@@ -41,7 +41,7 @@ const Sidebar = ({ onNewChat }) => {
   return (
     <div className="flex h-full w-full flex-col">
       <div className="flex items-center gap-3 px-5 pb-4 pt-6">
-        <span className="font-display text-xl font-semibold gradient-text">Whisper</span>
+        <span className="font-display text-xl font-semibold gradient-text">LowKey</span>
         <div className="ml-auto flex items-center gap-2">
           <button
             type="button"

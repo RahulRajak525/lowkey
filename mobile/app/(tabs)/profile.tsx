@@ -82,7 +82,7 @@ const ProfileTab = () => {
     if (!permission.granted) {
       Alert.alert(
         "Permission needed",
-        `Allow Whisper to access your ${source === "camera" ? "camera" : "photos"} to update your profile picture.`,
+        `Allow LowKey to access your ${source === "camera" ? "camera" : "photos"} to update your profile picture.`,
       );
       return;
     }
