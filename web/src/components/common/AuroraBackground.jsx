@@ -1,25 +1,39 @@
 /**
- * Decorative, non-interactive glow blobs used behind hero/empty panels.
- * Pure CSS animation (float/glow-pulse from index.css) — no canvas or JS
- * animation loop, so it costs nothing while sitting behind real content.
+ * Atmospheric lighting behind hero and empty panels: a warm key light, a
+ * faint violet fill, a top highlight and film grain. Soft radial gradients
+ * (no blur filters) drifting on a slow CSS animation, so it costs next to
+ * nothing behind real content. `grid` adds a faint dot grid that fades out
+ * from the center.
  */
-const AuroraBackground = () => (
-  <div className="pointer-events-none absolute inset-0 overflow-hidden" aria-hidden="true">
+const AuroraBackground = ({ grid = false, className = '' }) => (
+  <div className={`pointer-events-none absolute inset-0 overflow-hidden ${className}`} aria-hidden="true">
     <div
-      className="animate-float absolute -left-32 -top-32 size-[26rem] rounded-full opacity-40 blur-3xl"
-      style={{ background: 'radial-gradient(circle, var(--color-primary) 0%, transparent 70%)' }}
+      className="animate-float absolute -left-[12%] -top-[28%] size-[48rem] rounded-full opacity-[0.2]"
+      style={{ background: 'radial-gradient(circle, var(--color-brand) 0%, transparent 62%)' }}
     />
     <div
-      className="animate-float absolute -bottom-40 -right-20 size-[30rem] rounded-full opacity-30 blur-3xl"
+      className="animate-float absolute -bottom-[32%] -right-[14%] size-[44rem] rounded-full opacity-[0.13]"
       style={{
-        background: 'radial-gradient(circle, var(--color-accent) 0%, transparent 70%)',
-        animationDelay: '-3.5s',
+        background: 'radial-gradient(circle, var(--color-iris) 0%, transparent 62%)',
+        animationDelay: '-4.5s',
       }}
     />
     <div
-      className="animate-glow-pulse absolute left-1/3 top-1/2 size-72 rounded-full opacity-20 blur-3xl"
-      style={{ background: 'radial-gradient(circle, var(--color-primary-light) 0%, transparent 70%)' }}
+      className="absolute inset-0"
+      style={{ background: 'radial-gradient(ellipse 80% 50% at 50% -10%, rgb(255 255 255 / 0.045), transparent 70%)' }}
     />
+    {grid ? (
+      <div
+        className="absolute inset-0"
+        style={{
+          backgroundImage: 'radial-gradient(rgb(255 255 255 / 0.07) 1px, transparent 1px)',
+          backgroundSize: '26px 26px',
+          maskImage: 'radial-gradient(ellipse 70% 60% at 50% 45%, black, transparent 75%)',
+          WebkitMaskImage: 'radial-gradient(ellipse 70% 60% at 50% 45%, black, transparent 75%)',
+        }}
+      />
+    ) : null}
+    <div className="noise absolute inset-0" />
   </div>
 )
 
