@@ -101,14 +101,14 @@ const ServerWakeNotice = () => {
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -12 }}
             transition={{ duration: 0.2, ease: 'easeOut' }}
-            className="glass-panel pointer-events-auto w-full max-w-sm rounded-2xl px-4 py-3 shadow-2xl shadow-black/40"
+            className="surface-float pointer-events-auto w-full max-w-sm rounded-card px-4 py-3"
           >
             {status === 'waking' ? (
               <div className="flex items-center gap-3">
-                <TypingBubble dotSize={6} />
+                <TypingBubble dotSize={5} />
                 <div className="min-w-0">
-                  <p className="text-sm font-semibold text-foreground">Waking up the server…</p>
-                  <p className="mt-0.5 text-xs text-subtle-foreground">
+                  <p className="text-ui font-medium text-fg">Waking up the server…</p>
+                  <p className="mt-0.5 text-caption text-fg-3">
                     LowKey runs on a free server that naps when idle. This can take up to a minute —
                     thanks for your patience!
                   </p>
@@ -116,8 +116,8 @@ const ServerWakeNotice = () => {
               </div>
             ) : (
               <div className="flex items-center gap-3">
-                <CheckCircle2 size={20} className="shrink-0 text-primary" />
-                <p className="text-sm font-semibold text-foreground">Server is awake — you’re all set!</p>
+                <CheckCircle2 size={18} className="shrink-0 text-success" />
+                <p className="text-ui font-medium text-fg">Server is awake — you’re all set!</p>
               </div>
             )}
           </motion.div>

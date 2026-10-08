@@ -1,22 +1,28 @@
-import { useState } from 'react'
+import { useId, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { AnimatePresence, motion } from 'framer-motion'
-import { CloudOff, Loader2, Mail, Search, UserPlus, X } from 'lucide-react'
+import { CloudOff, EyeOff, Mail, RefreshCw, UserPlus, X } from 'lucide-react'
 import { useMe } from '@/hooks/useAuth'
 import { useGetOrCreateChat } from '@/hooks/useChats'
 import { isLikelyEmail, useSearchUserByEmail } from '@/hooks/useUsers'
-import UserRow from './UserRow'
+import { fadeUp, transitions } from '@/lib/motion'
 import EmptyState from '@/components/common/EmptyState'
 import { TypingBubble } from '@/components/common/TypingBubble'
+import Button from '@/components/ui/Button'
+import Dialog from '@/components/ui/Dialog'
+import IconButton from '@/components/ui/IconButton'
+import Kbd from '@/components/ui/Kbd'
+import UserRow from './UserRow'
 
 const SectionLabel = ({ children }) => (
-  <p className="mb-1 mt-4 px-3 text-[11px] font-semibold uppercase tracking-widest text-subtle-foreground first:mt-0">
+  <p className="mb-1 mt-3 px-2.5 text-meta font-medium uppercase tracking-[0.08em] text-fg-4 first:mt-1">
     {children}
   </p>
 )
 
 const NewChatModal = ({ onClose }) => {
   const navigate = useNavigate()
+  const titleId = useId()
   const [query, setQuery] = useState('')
 
   const { data: me } = useMe()
@@ -64,8 +70,8 @@ const NewChatModal = ({ onClose }) => {
               />
             </>
           ) : null}
-          <p className="px-3 pt-8 text-center text-sm text-subtle-foreground">
-            Enter someone&apos;s email above to start a new conversation with them.
+          <p className="mx-auto max-w-xs px-3 pb-4 pt-8 text-center text-ui text-fg-3">
+            Enter someone&apos;s email above to start a conversation with them.
           </p>
         </>
       )
@@ -76,15 +82,15 @@ const NewChatModal = ({ onClose }) => {
         <EmptyState
           icon={Mail}
           title="Keep typing…"
-          subtitle="Enter a full email address to search, e.g. name@example.com"
+          subtitle="Enter a full email address, e.g. name@example.com"
         />
       )
     }
 
     if (isSearching) {
       return (
-        <div className="flex flex-1 items-center justify-center py-16">
-          <Loader2 size={22} className="animate-spin text-subtle-foreground" />
+        <div className="flex flex-1 items-center justify-center py-14">
+          <TypingBubble label="Searching" dotSize={5} />
         </div>
       )
     }
@@ -94,14 +100,11 @@ const NewChatModal = ({ onClose }) => {
         <EmptyState
           icon={CloudOff}
           title="Search failed"
+          subtitle="Check your connection and try again."
           action={
-            <button
-              type="button"
-              onClick={() => retrySearch()}
-              className="mt-2 rounded-full bg-primary px-5 py-2.5 text-sm font-semibold text-surface-dark"
-            >
+            <Button size="sm" icon={RefreshCw} onClick={() => retrySearch()}>
               Retry
-            </button>
+            </Button>
           }
         />
       )
@@ -109,11 +112,7 @@ const NewChatModal = ({ onClose }) => {
 
     if (!foundUser) {
       return (
-        <EmptyState
-          icon={UserPlus}
-          title="No user found"
-          subtitle={`Nobody is signed up with "${trimmedQuery}"`}
-        />
+        <EmptyState icon={UserPlus} title="No one found" subtitle={`Nobody is signed up with “${trimmedQuery}”.`} />
       )
     }
 
@@ -126,67 +125,57 @@ const NewChatModal = ({ onClose }) => {
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-start justify-center px-4 pt-[8vh] sm:items-center sm:pt-0">
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        exit={{ opacity: 0 }}
-        onClick={onClose}
-        className="absolute inset-0 bg-surface-dark/70 backdrop-blur-sm"
-      />
+    <Dialog onClose={onClose} labelledBy={titleId} placement="top" className="max-w-md">
+      <div className="flex items-start gap-3 px-5 pb-4 pt-5">
+        <div className="min-w-0 flex-1">
+          <h2 id={titleId} className="text-title font-semibold text-fg">
+            New conversation
+          </h2>
+          <p className="mt-0.5 text-ui text-fg-3">Find someone by their exact email address.</p>
+        </div>
+        <IconButton icon={X} label="Close" size="sm" tooltip={false} onClick={onClose} className="-mr-1.5 -mt-1" />
+      </div>
 
-      <motion.div
-        initial={{ opacity: 0, y: 16, scale: 0.98 }}
-        animate={{ opacity: 1, y: 0, scale: 1 }}
-        exit={{ opacity: 0, y: 10, scale: 0.98 }}
-        transition={{ duration: 0.18, ease: 'easeOut' }}
-        className="glass-panel relative flex max-h-[74vh] w-full max-w-md flex-col overflow-hidden rounded-3xl shadow-2xl shadow-black/40"
-      >
-        <div className="flex items-center gap-3 px-5 pb-4 pt-5">
-          <div className="min-w-0 flex-1">
-            <h2 className="font-display text-lg font-semibold text-foreground">New chat</h2>
-            <p className="text-xs text-subtle-foreground">Find someone by their email address</p>
-          </div>
-          <button
-            type="button"
-            onClick={onClose}
-            aria-label="Close"
-            className="flex size-9 shrink-0 items-center justify-center rounded-full bg-surface-light text-subtle-foreground hover:text-foreground"
+      <div className="px-5 pb-3">
+        <label className="flex h-11 items-center gap-2.5 rounded-control border border-line-strong bg-panel px-3.5 transition-[border-color,box-shadow] duration-150 ease-out-soft focus-within:border-brand/45 focus-within:shadow-[0_0_0_4px_rgb(244_162_97/0.1)]">
+          <Mail size={16} className="shrink-0 text-fg-3" aria-hidden="true" />
+          <input
+            autoFocus
+            type="email"
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+            placeholder="name@example.com"
+            aria-label="Email address"
+            className="min-w-0 flex-1 bg-transparent text-body text-fg outline-none placeholder:text-fg-4"
+          />
+        </label>
+      </div>
+
+      <div className="flex min-h-52 flex-1 flex-col overflow-y-auto px-3 pb-3">{renderBody()}</div>
+
+      <div className="flex items-center justify-between gap-3 border-t border-line px-5 py-3 text-caption text-fg-4">
+        <span className="flex items-center gap-1.5">
+          <EyeOff size={13} aria-hidden="true" />
+          No public directory
+        </span>
+        <span className="hidden items-center gap-1.5 sm:flex">
+          <Kbd>Esc</Kbd>
+          to close
+        </span>
+      </div>
+
+      <AnimatePresence>
+        {isPending ? (
+          <motion.div
+            {...fadeUp}
+            transition={transitions.base}
+            className="pointer-events-none absolute inset-x-0 bottom-16 flex justify-center"
           >
-            <X size={17} />
-          </button>
-        </div>
-
-        <div className="px-5 pb-4">
-          <div className="flex h-11 items-center gap-2 rounded-full border border-surface-light bg-surface px-4">
-            <Search size={16} className="text-subtle-foreground" />
-            <input
-              autoFocus
-              type="email"
-              value={query}
-              onChange={(event) => setQuery(event.target.value)}
-              placeholder="Search by email"
-              className="flex-1 bg-transparent text-[15px] text-foreground placeholder:text-subtle-foreground focus:outline-none"
-            />
-          </div>
-        </div>
-
-        <div className="flex flex-1 flex-col overflow-y-auto px-3 pb-5">{renderBody()}</div>
-
-        <AnimatePresence>
-          {isPending ? (
-            <motion.div
-              initial={{ opacity: 0, y: 8 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: 8 }}
-              className="pointer-events-none absolute inset-x-0 bottom-5 flex justify-center"
-            >
-              <TypingBubble label="Opening chat" dotSize={7} />
-            </motion.div>
-          ) : null}
-        </AnimatePresence>
-      </motion.div>
-    </div>
+            <TypingBubble label="Opening chat" dotSize={5} />
+          </motion.div>
+        ) : null}
+      </AnimatePresence>
+    </Dialog>
   )
 }
 

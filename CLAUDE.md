@@ -60,8 +60,8 @@ src/scripts/             seed.ts, dropStaleUserIndexes.ts
 `formatChat` → `{_id, participant (other user, or self if isSelf, or null), isSelf, lastMessage, lastMessageAt, createdAt}`; `lastMessage` comes back `null` if that particular message is hidden for the requesting user (see below).
 
 **Two per-user chat actions, both REST, neither touches the other participant:**
-- **Delete Chat** (chat-list long-press on mobile / hover trash on web) → `DELETE /chats/:id`: hides every message for me (`Message.deletedFor`) *and* adds me to `Chat.hiddenFor`, so the row leaves my list. `send-message` resets `hiddenFor = []`, so a new message from either side brings the row back showing only that new message (old ones stay hidden per message). Starting a chat with them again via New Chat (`getOrCreateChat`) also `$pull`s me from `hiddenFor`.
-- **Clear Chat** (Chat Details screen/modal) → `DELETE /chats/:id/messages`: hides every message for me only; the row and contact stay in my list.
+- **Delete Chat** (chat-list long-press on mobile / hover trash, right-click or the details panel on web) → `DELETE /chats/:id`: hides every message for me (`Message.deletedFor`) *and* adds me to `Chat.hiddenFor`, so the row leaves my list. `send-message` resets `hiddenFor = []`, so a new message from either side brings the row back showing only that new message (old ones stay hidden per message). Starting a chat with them again via New Chat (`getOrCreateChat`) also `$pull`s me from `hiddenFor`.
+- **Clear Chat** (Chat Details screen on mobile / details panel on web) → `DELETE /chats/:id/messages`: hides every message for me only; the row and contact stay in my list.
 
 `hiddenFor` is deliberately not named `deletedFor` — an older, removed `Chat.deletedFor` may still sit on existing documents. `formatChat` nulls out `lastMessage` when that specific message is hidden for the requesting user, so the list preview falls back to "No messages yet" for them without affecting the other participant's view.
 
@@ -85,7 +85,7 @@ The same hooks and libs exist in both, so a feature change usually touches both.
 | Background sync | components/AuthSync · SocketSync | components/AuthSync · SocketSync |
 | Cold-start notice | components/ServerWakeNotice (mounted in app/_layout) | components/common/ServerWakeNotice (mounted in main.jsx) |
 | Loading UI | components/TypingBubble · ChatListSkeleton · MessageThreadSkeleton | components/common/TypingBubble · chat/*Skeleton |
-| Theme | global.css (`:root` + `.dark:root`) + tailwind.config.js · lib/theme.ts | index.css `@theme` (dark only) |
+| Theme | global.css (`:root` + `.dark:root`) + tailwind.config.js · lib/theme.ts | index.css `@theme` tokens (dark only: canvas/panel/raised/hover/active, fg-1…4, brand, type scale `text-meta…display`, radii) |
 
 Query keys: `["me"]` · `["chats"]` · `["users", "search", email]` · `["messages", chatId]`
 
@@ -105,10 +105,11 @@ Also: lib/authErrors.ts, types/index.ts. `mobile/CLAUDE.md` says to read the Exp
 **web** (`web/src/`)
 ```
 pages/SignInPage.jsx    route "/*" (Clerk path routing needs the wildcard for /sso-callback)
-pages/ChatsLayout.jsx   "/chats", "/chats/:chatId" → Sidebar + MessageThread + NewChatModal
-components/chat/        Sidebar (hover trash icon on ChatListItem → delete chat = remove row + clear, window.confirm), MessageThread (header is clickable → ChatDetailsModal), Composer, MessageBubble (hover "⋯" menu → delete message), NewChatModal, ChatDetailsModal (one conversation's info + "Clear Chat", clears its messages for me, row stays), UserRow
-components/common/      Avatar, EmptyState, SplashScreen, AuroraBackground, TypingBubble
-lib/types.js            senderOf, hasParticipant
+pages/ChatsLayout.jsx   "/chats", "/chats/:chatId" → 3 zones: Sidebar | MessageThread | ChatDetailsPanel (docked ≥1280px, drawer below; phones: list ↔ thread)
+components/chat/        Sidebar (⌘K search, ProfileMenu = Clerk manage account/sign out; hover trash or right-click on ChatListItem → delete chat = remove row + clear, via ConfirmDialog), MessageThread (header: details toggle + in-thread search; day separators, sender grouping, jump-to-latest, connection notice), Composer (emoji picker, Enter/Shift+Enter), MessageBubble (hover toolbar copy/"⋯" → delete message; right-click/long-press opens the menu), RichText (links, `code`, ``` blocks, search highlight — display only), NewChatModal, ChatDetailsPanel (one conversation's info + shared links + "Clear Chat" / "Delete Chat"), UserRow
+components/common/      Avatar, EmptyState, SplashScreen, AuroraBackground, TypingBubble, ServerWakeNotice
+components/ui/          design-system primitives: Logo, Button, IconButton, Kbd, Dialog, ConfirmDialog, Menu
+lib/                    types.js (senderOf, hasParticipant) · format.js (timestamps) · links.js · motion.js (shared easing/durations) · platform.js (⌘/Ctrl) · useEscapeLayer.js · useMediaQuery.js · clerkAppearance.js (Clerk theme + "Sign in to LowKey" copy)
 ```
 
 **ServerWakeNotice**: `whisper-api` is on Render's free plan and sleeps when idle. On every load, and when the app returns after 10+ min in the background (a hidden tab on web), both clients check `GET /health`. The "Waking up the server…" banner appears only if that takes longer than 2.5s, and changes to "Server is awake" once it answers. No flag is ever stored, so a return visit after a long break shows the banner again.
