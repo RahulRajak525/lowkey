@@ -67,7 +67,9 @@ const Composer = ({ value, onChange, onSend, canSend, isConnected, placeholder }
   return (
     <div className="shrink-0 px-3 pt-2 md:px-8" style={{ paddingBottom: 'max(0.75rem, env(safe-area-inset-bottom))' }}>
       <div className="group/composer mx-auto w-full max-w-205">
-        <div className="flex items-end gap-1 rounded-[18px] border border-line-strong bg-raised p-1.5 shadow-raised transition-[border-color,box-shadow] duration-200 ease-out-soft focus-within:border-brand/25 focus-within:shadow-[0_0_0_3px_rgb(244_162_97/0.06)]">
+        {/* Quiet at rest; on focus it lifts slightly and takes a faint warm
+            edge. Radius is concentric with the 10px send button + 6px padding. */}
+        <div className="flex items-end gap-1 rounded-bubble border border-line bg-raised/70 p-1.5 transition-[border-color,background-color,box-shadow] duration-200 ease-out-soft hover:border-line-strong focus-within:border-brand/25 focus-within:bg-raised focus-within:shadow-[0_0_0_3px_rgb(244_162_97/0.06),0_12px_32px_-16px_rgb(0_0_0/0.8)]">
           <div className="relative">
             <IconButton
               icon={Smile}
@@ -87,7 +89,7 @@ const Composer = ({ value, onChange, onSend, canSend, isConnected, placeholder }
                     type="button"
                     role="menuitem"
                     onClick={() => insertEmoji(emoji)}
-                    className="flex size-8 items-center justify-center rounded-[8px] text-[18px] outline-none transition-[background-color,transform] duration-150 hover:scale-110 hover:bg-hover focus-visible:bg-hover"
+                    className="flex size-8 items-center justify-center rounded-item text-[18px] outline-none transition-[background-color,transform] duration-150 hover:scale-110 hover:bg-hover focus-visible:bg-hover"
                   >
                     {emoji}
                   </button>
@@ -104,7 +106,8 @@ const Composer = ({ value, onChange, onSend, canSend, isConnected, placeholder }
             onKeyDown={handleKeyDown}
             placeholder={isConnected ? placeholder : 'Connecting…'}
             aria-label="Message"
-            className="min-h-9 flex-1 resize-none bg-transparent px-1.5 py-2 text-message text-fg outline-none placeholder:text-fg-4"
+            // 16px on touch screens: iOS zooms the page into any smaller input.
+            className="min-h-9 flex-1 resize-none bg-transparent px-1.5 py-2 text-message text-fg caret-brand outline-none placeholder:text-fg-4 pointer-coarse:text-[16px]"
             style={{ maxHeight: MAX_HEIGHT }}
           />
 
@@ -116,7 +119,7 @@ const Composer = ({ value, onChange, onSend, canSend, isConnected, placeholder }
             animate={{ scale: canSend ? 1 : 0.94 }}
             whileTap={canSend ? { scale: 0.88 } : undefined}
             transition={transitions.fast}
-            className={`flex size-9 shrink-0 items-center justify-center overflow-hidden rounded-[12px] transition-[color,box-shadow] duration-200 ${
+            className={`flex size-9 shrink-0 items-center justify-center overflow-hidden rounded-control transition-[color,box-shadow] duration-200 pointer-coarse:size-11 ${
               canSend ? 'brand-gradient text-brand-ink shadow-bubble' : 'cursor-not-allowed bg-active text-fg-4'
             }`}
           >
@@ -136,7 +139,12 @@ const Composer = ({ value, onChange, onSend, canSend, isConnected, placeholder }
           </motion.button>
         </div>
 
-        <p className="mt-1.5 hidden h-4 items-center justify-end gap-3 px-2 text-meta text-fg-4 opacity-0 transition-opacity duration-200 group-focus-within/composer:opacity-100 md:flex">
+        <p
+          aria-hidden="true"
+          className={`mt-1.5 hidden h-4 items-center justify-end gap-3 px-2 text-meta text-fg-4 opacity-0 transition-opacity duration-200 md:flex ${
+            value.trim() ? 'group-focus-within/composer:opacity-100' : ''
+          }`}
+        >
           <span className="flex items-center gap-1">
             <Kbd>Enter</Kbd> to send
           </span>

@@ -1,10 +1,12 @@
+// Touch screens get larger hit targets (40–44px) at every size.
 const sizes = {
-  sm: 'size-8',
-  md: 'size-9',
-  lg: 'size-10',
+  xs: 'size-7',
+  sm: 'size-8 pointer-coarse:size-10',
+  md: 'size-9 pointer-coarse:size-11',
+  lg: 'size-10 pointer-coarse:size-11',
 }
 
-const iconSizes = { sm: 16, md: 18, lg: 18 }
+const iconSizes = { xs: 14, sm: 16, md: 18, lg: 18 }
 
 const variants = {
   ghost: 'text-fg-3 hover:bg-hover hover:text-fg',
@@ -47,7 +49,7 @@ const IconButton = ({
     {tooltip ? (
       <span
         aria-hidden="true"
-        className={`pointer-events-none absolute z-50 whitespace-nowrap rounded-[7px] border border-line-strong bg-raised px-2 py-1 text-meta font-medium text-fg-2 opacity-0 shadow-float transition-opacity duration-150 group-hover/ib:opacity-100 group-hover/ib:delay-500 group-focus-visible/ib:opacity-100 ${
+        className={`pointer-events-none absolute z-50 whitespace-nowrap rounded-chip border border-line-strong bg-raised px-2 py-1 text-meta font-medium text-fg-2 opacity-0 shadow-float transition-opacity duration-150 group-hover/ib:opacity-100 group-hover/ib:delay-500 group-focus-visible/ib:opacity-100 ${
           tooltip === 'top' ? 'bottom-full mb-2' : 'top-full mt-2'
         } ${tooltipAlign[align]}`}
       >

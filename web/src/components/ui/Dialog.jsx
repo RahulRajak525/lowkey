@@ -37,7 +37,7 @@ const Dialog = ({ onClose, labelledBy, placement = 'center', className = 'max-w-
         transition={transitions.base}
         onClick={onClose}
         aria-hidden="true"
-        className="absolute inset-0 bg-canvas/70 backdrop-blur-[6px]"
+        className="absolute inset-0 bg-canvas/75"
       />
       <motion.div
         ref={panelRef}

@@ -1,18 +1,18 @@
 /**
  * Atmospheric lighting behind hero and empty panels: a warm key light, a
- * faint violet fill, a top highlight and film grain. Soft radial gradients
- * (no blur filters) drifting on a slow CSS animation, so it costs next to
- * nothing behind real content. `grid` adds a faint dot grid that fades out
- * from the center.
+ * faint violet fill, a top highlight and film grain. Soft radial gradients,
+ * no blur filters. Static by default; `animated` lets the lights drift
+ * slowly (used only on the sign-in page, so nothing loops behind the app).
+ * `grid` adds a faint dot grid that fades out from the center.
  */
-const AuroraBackground = ({ grid = false, className = '' }) => (
+const AuroraBackground = ({ grid = false, animated = false, className = '' }) => (
   <div className={`pointer-events-none absolute inset-0 overflow-hidden ${className}`} aria-hidden="true">
     <div
-      className="animate-float absolute -left-[12%] -top-[28%] size-[48rem] rounded-full opacity-[0.2]"
+      className={`absolute -left-[12%] -top-[28%] size-[48rem] rounded-full opacity-[0.2] ${animated ? 'animate-float' : ''}`}
       style={{ background: 'radial-gradient(circle, var(--color-brand) 0%, transparent 62%)' }}
     />
     <div
-      className="animate-float absolute -bottom-[32%] -right-[14%] size-[44rem] rounded-full opacity-[0.13]"
+      className={`absolute -bottom-[32%] -right-[14%] size-[44rem] rounded-full opacity-[0.13] ${animated ? 'animate-float' : ''}`}
       style={{
         background: 'radial-gradient(circle, var(--color-iris) 0%, transparent 62%)',
         animationDelay: '-4.5s',

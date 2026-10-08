@@ -38,7 +38,7 @@ const ActionRow = ({ icon: Icon, title, description, tone = 'default', onClick }
       }`}
     >
       <span
-        className={`mt-0.5 flex size-7 shrink-0 items-center justify-center rounded-[8px] border ${
+        className={`mt-0.5 flex size-7 shrink-0 items-center justify-center rounded-item border ${
           isDanger ? 'border-danger/20 bg-danger/10 text-danger' : 'border-line bg-raised text-fg-2'
         }`}
       >
@@ -132,7 +132,11 @@ const DetailsContent = ({ chat, onClose }) => {
             {formatFullDate(chat.createdAt) || '—'}
           </InfoRow>
           <InfoRow icon={MessagesSquare} label="Messages">
-            {messages ? visibleMessages.length : '—'}
+            {messages ? (
+              visibleMessages.length
+            ) : (
+              <span className="animate-breathe inline-block h-2.5 w-8 rounded-full bg-active align-middle" />
+            )}
           </InfoRow>
         </div>
 
@@ -224,7 +228,7 @@ const ChatDetailsPanel = ({ chat, variant, onClose }) => {
         transition={transitions.base}
         onClick={onClose}
         aria-hidden="true"
-        className="absolute inset-0 bg-canvas/60 backdrop-blur-[2px]"
+        className="absolute inset-0 bg-canvas/65"
       />
       <motion.aside
         role="dialog"
@@ -234,7 +238,7 @@ const ChatDetailsPanel = ({ chat, variant, onClose }) => {
         animate={{ x: 0, opacity: 1 }}
         exit={{ x: 32, opacity: 0 }}
         transition={transitions.slow}
-        className="absolute inset-y-0 right-0 w-full max-w-[360px] border-l border-line bg-panel shadow-float"
+        className="absolute inset-y-0 right-0 w-full max-w-90 border-l border-line bg-panel shadow-float"
       >
         <DetailsContent key={chat._id} chat={chat} onClose={onClose} />
       </motion.aside>

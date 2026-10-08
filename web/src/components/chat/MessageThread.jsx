@@ -28,6 +28,7 @@ import { formatDayLabel, parseDate } from '@/lib/format'
 import { fadeUp, transitions } from '@/lib/motion'
 import { emitTyping, setActiveChat, useSocketStore } from '@/lib/socket'
 import { hasParticipant } from '@/lib/types'
+import { useConnectionStatus } from '@/lib/useConnectionStatus'
 import { useEscapeLayer } from '@/lib/useEscapeLayer'
 
 /** Silence after the last keystroke before the other side stops seeing "typing...". */
@@ -49,7 +50,7 @@ const belongTogether = (a, b) => {
 
 const DaySeparator = ({ label }) => (
   <div className="sticky top-2 z-10 my-4 flex justify-center first:mt-0">
-    <span className="rounded-full border border-line bg-panel/85 px-2.5 py-1 text-meta font-medium text-fg-3 backdrop-blur-md">
+    <span className="rounded-full border border-line bg-panel px-2.5 py-1 text-meta font-medium text-fg-3">
       {label}
     </span>
   </div>
@@ -79,7 +80,7 @@ const ThreadSearchBar = ({ query, onQueryChange, matchCount, position, onStep, o
           }}
           placeholder="Search in conversation"
           aria-label="Search in conversation"
-          className="min-w-0 flex-1 bg-transparent text-body text-fg outline-none placeholder:text-fg-4"
+          className="min-w-0 flex-1 bg-transparent text-body text-fg outline-none placeholder:text-fg-4 pointer-coarse:text-[16px]"
         />
         {query.trim() ? (
           <span className="shrink-0 text-meta tabular-nums text-fg-3" aria-live="polite">
@@ -115,9 +116,7 @@ const MessageThread = ({ chatId, detailsOpen, onToggleDetails }) => {
   const isTyping = useRef(false)
   const idleTimer = useRef(null)
 
-  // "Connecting…" on a cold start, "Reconnecting…" once the link has worked.
-  const [hasConnected, setHasConnected] = useState(isConnected)
-  if (isConnected && !hasConnected) setHasConnected(true)
+  const connection = useConnectionStatus()
 
   // Joining the room is what makes the server deliver this chat's messages
   // live; leaving on unmount also clears the chat's unread dot.
@@ -288,7 +287,19 @@ const MessageThread = ({ chatId, detailsOpen, onToggleDetails }) => {
 
   if (!chat) {
     if (isLoadingChats) {
-      return <MessageThreadSkeleton />
+      // Header-shaped placeholder too, so nothing jumps when the chat lands.
+      return (
+        <div className="flex h-full min-w-0 flex-1 flex-col" role="status" aria-label="Loading conversation">
+          <div className="flex h-14 shrink-0 items-center gap-3 border-b border-line px-4">
+            <div className="animate-breathe size-8.5 rounded-full bg-active" />
+            <div className="animate-breathe space-y-1.5">
+              <div className="h-2.5 w-28 rounded-full bg-active" />
+              <div className="h-2 w-16 rounded-full bg-hover" />
+            </div>
+          </div>
+          <MessageThreadSkeleton />
+        </div>
+      )
     }
     return (
       <EmptyState
@@ -310,7 +321,12 @@ const MessageThread = ({ chatId, detailsOpen, onToggleDetails }) => {
   }
 
   const status = !isConnected
-    ? { key: 'connection', text: hasConnected ? 'Reconnecting…' : 'Connecting…', tone: 'text-warning', dot: 'animate-breathe bg-warning' }
+    ? {
+        key: 'connection',
+        text: connection === 'reconnecting' ? 'Reconnecting…' : 'Connecting…',
+        tone: 'text-warning',
+        dot: 'animate-breathe bg-warning',
+      }
     : isParticipantTyping
       ? { key: 'typing', text: 'typing…', tone: 'text-brand' }
       : isSelfChat
@@ -378,7 +394,13 @@ const MessageThread = ({ chatId, detailsOpen, onToggleDetails }) => {
   }
 
   return (
-    <div className="flex h-full min-w-0 flex-1 flex-col">
+    <div className="relative flex h-full min-w-0 flex-1 flex-col">
+      {/* Faint warm light spilling from under the header; static, painted
+          beneath the messages. */}
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute inset-x-0 top-14 h-48 bg-[radial-gradient(ellipse_50%_100%_at_50%_0%,rgb(244_162_97/0.05),transparent)]"
+      />
       <header className="relative z-20 flex h-14 shrink-0 items-center gap-1.5 border-b border-line px-2 md:px-4">
         <IconButton icon={ArrowLeft} label="Back to chats" tooltip={false} onClick={() => navigate('/chats')} className="md:hidden" />
 
@@ -394,7 +416,7 @@ const MessageThread = ({ chatId, detailsOpen, onToggleDetails }) => {
             <p className="truncate text-body font-semibold text-fg">
               {participant.name}
               {isSelfChat ? (
-                <span className="ml-1.5 rounded-[5px] bg-active px-1.5 py-px align-[1px] text-meta font-medium text-fg-3">
+                <span className="ml-1.5 rounded-chip bg-active px-1.5 py-px align-[1px] text-meta font-medium text-fg-3">
                   You
                 </span>
               ) : null}
@@ -475,11 +497,18 @@ const MessageThread = ({ chatId, detailsOpen, onToggleDetails }) => {
               animate={{ opacity: 1, y: 0, transition: { ...transitions.base, delay: 0.8 } }}
               exit={{ opacity: 0, y: -6 }}
               transition={transitions.base}
-              className="pointer-events-none absolute inset-x-0 top-3 z-20 flex justify-center px-4"
+              // Phones only: from md up the sidebar carries this notice.
+              className="pointer-events-none absolute inset-x-0 top-3 z-20 flex justify-center px-4 md:hidden"
             >
               <div role="status" className="surface-float flex items-center gap-2 rounded-full px-3 py-1.5 text-caption text-fg-2">
                 <span className="animate-breathe size-1.5 rounded-full bg-warning" />
-                {hasConnected ? 'Reconnecting… messages will send once you’re back.' : 'Connecting…'}
+                {connection === 'reconnecting' ? (
+                  <span>
+                    <span className="font-medium text-fg">Connection interrupted.</span> Trying to reconnect…
+                  </span>
+                ) : (
+                  'Connecting…'
+                )}
               </div>
             </motion.div>
           ) : null}
