@@ -32,8 +32,8 @@ const rise = (delay) => ({
 
 /** A static glimpse of a conversation, purely decorative. */
 const ConversationPreview = () => (
-  <div aria-hidden="true" className="animate-float w-full max-w-sm" style={{ animationDuration: '12s' }}>
-    <div className="rounded-panel border border-line bg-panel/70 p-4 shadow-float backdrop-blur-md">
+  <div aria-hidden="true" className="w-full max-w-sm">
+    <div className="rounded-panel border border-line bg-panel/90 p-4 shadow-float">
       <div className="flex items-center gap-2.5 border-b border-line pb-3">
         <div className="relative flex size-8 items-center justify-center rounded-full bg-active text-ui font-semibold text-fg-2">
           M
@@ -61,7 +61,7 @@ const ConversationPreview = () => (
 
 const SignInPage = () => (
   <div className="relative min-h-dvh w-full overflow-x-hidden bg-canvas">
-    <AuroraBackground grid />
+    <AuroraBackground grid animated />
 
     <div className="relative z-10 mx-auto flex min-h-dvh w-full max-w-295 flex-col px-5 py-6 sm:px-8 lg:grid lg:grid-cols-[minmax(0,1fr)_420px] lg:items-center lg:gap-16 lg:px-12 lg:py-10 xl:gap-24">
       {/* Brand story */}
@@ -73,12 +73,9 @@ const SignInPage = () => (
         <div className="mt-10 lg:mt-0">
           <motion.p
             {...rise(0.05)}
-            className="inline-flex items-center gap-2 rounded-full border border-line bg-panel/60 px-3 py-1 text-caption text-fg-2 backdrop-blur"
+            className="inline-flex items-center gap-2 rounded-full border border-line bg-panel/80 px-3 py-1 text-caption text-fg-2"
           >
-            <span className="relative flex size-1.5">
-              <span className="animate-ping-soft absolute inset-0 rounded-full bg-success" />
-              <span className="relative size-1.5 rounded-full bg-success" />
-            </span>
+            <span className="size-1.5 rounded-full bg-success shadow-[0_0_6px_rgb(61_220_151/0.8)]" />
             Real-time messaging
           </motion.p>
 
@@ -134,7 +131,7 @@ const SignInPage = () => (
             aria-hidden="true"
             className="absolute -inset-px rounded-[21px] bg-linear-to-b from-white/14 via-white/5 to-white/2"
           />
-          <div className="relative overflow-hidden rounded-panel bg-[#0f0f12]/95 shadow-float backdrop-blur-xl">
+          <div className="relative overflow-hidden rounded-panel bg-[#0f0f12] shadow-float">
             <SignIn routing="path" path="/" />
           </div>
         </div>

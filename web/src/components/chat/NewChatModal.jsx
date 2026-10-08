@@ -88,9 +88,17 @@ const NewChatModal = ({ onClose }) => {
     }
 
     if (isSearching) {
+      // Shaped like the UserRow it resolves into.
       return (
-        <div className="flex flex-1 items-center justify-center py-14">
-          <TypingBubble label="Searching" dotSize={5} />
+        <div role="status" aria-label="Searching">
+          <SectionLabel>Searching…</SectionLabel>
+          <div className="animate-breathe flex items-center gap-3 px-2.5 py-2">
+            <div className="size-9 shrink-0 rounded-full bg-active" />
+            <div className="flex-1 space-y-2">
+              <div className="h-2.5 w-32 rounded-full bg-active" />
+              <div className="h-2 w-44 rounded-full bg-hover" />
+            </div>
+          </div>
         </div>
       )
     }
@@ -146,7 +154,7 @@ const NewChatModal = ({ onClose }) => {
             onChange={(event) => setQuery(event.target.value)}
             placeholder="name@example.com"
             aria-label="Email address"
-            className="min-w-0 flex-1 bg-transparent text-body text-fg outline-none placeholder:text-fg-4"
+            className="min-w-0 flex-1 bg-transparent text-body text-fg caret-brand outline-none placeholder:text-fg-4 pointer-coarse:text-[16px]"
           />
         </label>
       </div>

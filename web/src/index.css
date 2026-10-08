@@ -45,11 +45,12 @@
   --color-line: rgb(255 255 255 / 0.065);
   --color-line-strong: rgb(255 255 255 / 0.11);
 
-  /* Text */
+  /* Text — fg-3 and fg-4 stay ≥ ~4.3:1 on the canvas, so even
+     tertiary metadata (timestamps, placeholders) remains readable. */
   --color-fg: #ededef;
-  --color-fg-2: #a1a1aa;
-  --color-fg-3: #71717a;
-  --color-fg-4: #4a4a52;
+  --color-fg-2: #b4b4bc;
+  --color-fg-3: #8f8f98;
+  --color-fg-4: #75757e;
 
   /* Brand */
   --color-brand: #f4a261;
@@ -63,7 +64,10 @@
   --color-warning: #f5b544;
   --color-danger: #f26d6d;
 
-  /* Radii — compact by default; only pills and avatars go fully round. */
+  /* Radii — compact by default; only pills and avatars go fully round.
+     Nested surfaces stay concentric: outer = inner + padding. */
+  --radius-chip: 6px; /* kbd, badges, tooltips, inline code */
+  --radius-item: 8px; /* menu items, emoji cells, code blocks */
   --radius-control: 10px;
   --radius-card: 14px;
   --radius-bubble: 16px;
@@ -72,10 +76,7 @@
 
   /* Elevation */
   --shadow-raised: inset 0 1px 0 rgb(255 255 255 / 0.03), 0 1px 2px rgb(0 0 0 / 0.35);
-  --shadow-float: 0 0 0 1px rgb(255 255 255 / 0.06), 0 4px 12px -4px rgb(0 0 0 / 0.5),
-    0 24px 56px -16px rgb(0 0 0 / 0.75);
-  --shadow-glow: 0 0 0 1px rgb(244 162 97 / 0.35), 0 0 0 4px rgb(244 162 97 / 0.08),
-    0 8px 28px -10px rgb(244 162 97 / 0.45);
+  --shadow-float: 0 0 0 1px rgb(255 255 255 / 0.06), 0 16px 40px -12px rgb(0 0 0 / 0.7);
   --shadow-bubble: inset 0 1px 0 rgb(255 255 255 / 0.28), 0 8px 22px -12px rgb(244 162 97 / 0.55);
 
   /* Motion — 150/200/250ms with one shared curve (see lib/motion.js). */
@@ -86,6 +87,19 @@
   --animate-fade-in: fade-in 0.25s var(--ease-out-soft) both;
   --animate-breathe: breathe 1.7s ease-in-out infinite;
   --animate-ping-soft: ping-soft 2.4s var(--ease-out-soft) infinite;
+  --animate-slide-back: slide-back 0.22s var(--ease-out-soft) both;
+}
+
+/* Phones: the chat list easing back in when you leave a thread. */
+@keyframes slide-back {
+  from {
+    opacity: 0;
+    transform: translateX(-16px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
 }
 
 @keyframes float {
@@ -208,11 +222,10 @@ body {
   }
 }
 
-/* Floating surfaces: menus, dialogs, toasts. */
+/* Floating surfaces: menus, dialogs, toasts. Solid rather than blurred —
+   backdrop-filter is costly and adds little behind an opaque panel. */
 @utility surface-float {
-  background: color-mix(in oklab, var(--color-raised) 94%, transparent);
-  backdrop-filter: blur(16px) saturate(140%);
-  -webkit-backdrop-filter: blur(16px) saturate(140%);
+  background: var(--color-raised);
   box-shadow: var(--shadow-float);
 }
 

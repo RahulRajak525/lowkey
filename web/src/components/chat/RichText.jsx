@@ -7,14 +7,14 @@ const INLINE_CODE = /`([^`\n]+)`/g
 const styles = {
   mine: {
     link: 'font-medium underline decoration-brand-ink/35 underline-offset-2 transition-colors hover:decoration-brand-ink',
-    code: 'rounded-[5px] bg-brand-ink/10 px-1 py-px font-mono text-[0.86em]',
-    block: 'my-1 block overflow-x-auto whitespace-pre rounded-[8px] bg-brand-ink/10 px-3 py-2 font-mono text-[0.82em] leading-relaxed',
+    code: 'rounded-chip bg-brand-ink/10 px-1 py-px font-mono text-[0.86em]',
+    block: 'my-1 block overflow-x-auto whitespace-pre rounded-item bg-brand-ink/10 px-3 py-2 font-mono text-[0.82em] leading-relaxed',
     mark: 'rounded-[3px] bg-brand-ink/20 text-inherit',
   },
   theirs: {
     link: 'text-brand-hi underline decoration-brand-hi/30 underline-offset-2 transition-colors hover:decoration-brand-hi',
-    code: 'rounded-[5px] border border-line bg-canvas/60 px-1 py-px font-mono text-[0.86em]',
-    block: 'my-1 block overflow-x-auto whitespace-pre rounded-[8px] border border-line bg-canvas/70 px-3 py-2 font-mono text-[0.82em] leading-relaxed',
+    code: 'rounded-chip border border-line bg-canvas/60 px-1 py-px font-mono text-[0.86em]',
+    block: 'my-1 block overflow-x-auto whitespace-pre rounded-item border border-line bg-canvas/70 px-3 py-2 font-mono text-[0.82em] leading-relaxed',
     mark: 'rounded-[3px] bg-brand/35 text-fg',
   },
 }

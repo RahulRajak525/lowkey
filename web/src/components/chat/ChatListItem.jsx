@@ -1,11 +1,13 @@
+import { memo } from 'react'
 import { NavLink } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { Trash2 } from 'lucide-react'
 import Avatar from '@/components/common/Avatar'
 import IconButton from '@/components/ui/IconButton'
+import Kbd from '@/components/ui/Kbd'
 import { formatListTime } from '@/lib/format'
 import { transitions } from '@/lib/motion'
-import { useSocketStore } from '@/lib/socket'
+import { useLongPress } from '@/lib/useLongPress'
 
 const TypingDots = () => (
   <span className="inline-flex items-center gap-[3px]" aria-hidden="true">
@@ -19,22 +21,42 @@ const TypingDots = () => (
   </span>
 )
 
-const ChatListItem = ({ chat, myId, onDelete }) => {
+const HighlightedName = ({ name, query }) => {
+  const index = query ? name.toLowerCase().indexOf(query) : -1
+  if (index === -1) return name
+  return (
+    <>
+      {name.slice(0, index)}
+      <span className="text-brand-hi">{name.slice(index, index + query.length)}</span>
+      {name.slice(index + query.length)}
+    </>
+  )
+}
+
+/**
+ * One conversation row. Presence comes in as props (computed once by the
+ * Sidebar) and the row is memoized, so a typing or presence change only
+ * re-renders the rows it affects.
+ *
+ * Visual priority: name, then current activity or last message, then time.
+ */
+const ChatListItem = ({
+  chat,
+  myId,
+  onDelete,
+  isOnline = false,
+  isTyping = false,
+  hasUnread = false,
+  query = '',
+  isEnterTarget = false,
+}) => {
   const participant = chat.participant
-  const { onlineUsers, typingUsers, unreadChats } = useSocketStore()
-
-  // Presence is about the person on the other side, and in a self chat there
-  // is none: the user is always here, and cannot be typing to themselves
-  // from somewhere else.
-  const isOnline = !chat.isSelf && onlineUsers.has(participant._id)
-  const isTyping = !chat.isSelf && typingUsers.get(chat._id) === participant._id
-  const hasUnread = unreadChats.has(chat._id)
-
   const lastMessage = chat.lastMessage
   const sentByMe = !chat.isSelf && Boolean(myId) && lastMessage?.sender === myId
 
   // Right-click on desktop, long-press on touch: the same delete flow as the
   // hover button, which touch screens never get to see.
+  const longPress = useLongPress(() => onDelete?.(chat))
   const handleContextMenu = (event) => {
     if (!onDelete) return
     event.preventDefault()
@@ -42,11 +64,15 @@ const ChatListItem = ({ chat, myId, onDelete }) => {
   }
 
   return (
-    <div className="group relative" onContextMenu={handleContextMenu}>
+    <div
+      className="group relative [-webkit-touch-callout:none] pointer-coarse:select-none"
+      onContextMenu={handleContextMenu}
+      {...longPress}
+    >
       <NavLink
         to={`/chats/${chat._id}`}
         className={({ isActive }) =>
-          `relative flex items-center gap-3 rounded-card px-2.5 py-2.5 outline-none transition-colors duration-150 ${
+          `relative flex items-center gap-3 rounded-card px-2.5 py-2.5 outline-none transition-colors duration-150 focus-visible:shadow-[inset_0_0_0_1px_rgb(244_162_97/0.45)] ${
             isActive
               ? 'bg-raised shadow-[inset_0_0_0_1px_var(--color-line)] [--avatar-ring:var(--color-raised)]'
               : '[--avatar-ring:var(--color-panel)] hover:bg-hover hover:[--avatar-ring:var(--color-hover)] focus-visible:bg-hover'
@@ -72,31 +98,37 @@ const ChatListItem = ({ chat, myId, onDelete }) => {
                     hasUnread ? 'font-semibold text-fg' : 'font-medium text-fg/90'
                   }`}
                 >
-                  {participant.name}
+                  <HighlightedName name={participant.name ?? ''} query={query} />
                   {chat.isSelf ? (
-                    <span className="ml-1.5 rounded-[5px] bg-active px-1.5 py-px align-[1px] text-meta font-medium text-fg-3">
+                    <span className="ml-1.5 rounded-chip bg-active px-1.5 py-px align-[1px] text-meta font-medium text-fg-3">
                       You
                     </span>
                   ) : null}
                 </p>
-                <span
-                  className={`shrink-0 text-meta tabular-nums transition-opacity duration-150 ${
-                    onDelete ? 'group-focus-within:opacity-0 group-hover:opacity-0' : ''
-                  } ${hasUnread ? 'font-medium text-brand' : 'text-fg-4'}`}
-                >
-                  {formatListTime(chat.lastMessageAt)}
-                </span>
+                {isEnterTarget ? (
+                  <Kbd className="shrink-0">↵</Kbd>
+                ) : (
+                  <span
+                    className={`shrink-0 text-meta tabular-nums transition-opacity duration-150 ${
+                      onDelete ? 'group-focus-within:opacity-0 group-hover:opacity-0' : ''
+                    } ${hasUnread ? 'font-medium text-brand' : 'text-fg-4'}`}
+                  >
+                    {formatListTime(chat.lastMessageAt)}
+                  </span>
+                )}
               </div>
 
               <div className="mt-0.5 flex items-center gap-2">
                 {isTyping ? (
-                  <p className="flex min-w-0 flex-1 items-center gap-1.5 text-ui text-brand">
+                  <p className="animate-fade-in flex min-w-0 flex-1 items-center gap-1.5 text-ui text-brand">
                     <TypingDots />
                     typing
                   </p>
                 ) : (
+                  // Keyed by the message, so a new arrival fades in.
                   <p
-                    className={`min-w-0 flex-1 truncate text-ui ${
+                    key={lastMessage?._id ?? 'none'}
+                    className={`animate-fade-in min-w-0 flex-1 truncate text-ui ${
                       lastMessage?.isDeleted ? 'italic text-fg-4' : hasUnread ? 'text-fg-2' : 'text-fg-3'
                     }`}
                   >
@@ -135,4 +167,4 @@ const ChatListItem = ({ chat, myId, onDelete }) => {
   )
 }
 
-export default ChatListItem
+export default memo(ChatListItem)

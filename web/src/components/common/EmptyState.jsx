@@ -12,7 +12,7 @@ const EmptyState = ({ icon: Icon, title, subtitle, action, size = 'md', classNam
     >
       {Icon ? (
         <div
-          className={`mb-5 flex items-center justify-center rounded-card border border-line bg-raised text-fg-3 shadow-raised ${
+          className={`mb-5 flex items-center justify-center rounded-card border border-line bg-raised text-fg-3 ${
             isLarge ? 'size-14' : 'size-11'
           }`}
         >

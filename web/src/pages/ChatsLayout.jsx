@@ -46,7 +46,9 @@ const ChatsLayout = () => {
   return (
     <div className="flex h-dvh w-full overflow-hidden bg-canvas">
       <aside
-        className={`w-full shrink-0 border-r border-line bg-panel md:block md:w-75 lg:w-[320px] 2xl:w-90 ${
+        // On phones the list replays a short slide-in each time it reappears
+        // (a CSS animation restarts when an element leaves display:none).
+        className={`w-full shrink-0 border-r border-line bg-panel max-md:animate-slide-back md:block md:w-70 lg:w-80 2xl:w-90 ${
           chatId ? 'hidden' : 'block'
         }`}
       >

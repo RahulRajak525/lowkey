@@ -67,7 +67,7 @@ export const MenuItem = ({ icon: Icon, tone = 'default', shortcut, onSelect, dis
     role="menuitem"
     disabled={disabled}
     onClick={onSelect}
-    className={`flex w-full items-center gap-2.5 rounded-[8px] px-2.5 py-2 text-left text-ui outline-none transition-colors duration-150 disabled:opacity-40 ${
+    className={`flex w-full items-center gap-2.5 rounded-item px-2.5 py-2 text-left pointer-coarse:py-3 text-ui outline-none transition-colors duration-150 disabled:opacity-40 ${
       tone === 'danger'
         ? 'text-danger hover:bg-danger/10 focus-visible:bg-danger/10'
         : 'text-fg-2 hover:bg-hover hover:text-fg focus-visible:bg-hover focus-visible:text-fg'

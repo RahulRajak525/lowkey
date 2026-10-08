@@ -3,7 +3,13 @@ import { useClerk, useUser } from '@clerk/react'
 import { LogOut, UserRound } from 'lucide-react'
 import Avatar from '@/components/common/Avatar'
 import { Menu, MenuItem, MenuLabel, MenuSeparator } from '@/components/ui/Menu'
-import { useSocketStore } from '@/lib/socket'
+import { useConnectionStatus } from '@/lib/useConnectionStatus'
+
+const connectionLabels = {
+  connected: { text: 'Connected', dot: 'bg-success' },
+  connecting: { text: 'Connecting…', dot: 'animate-breathe bg-warning' },
+  reconnecting: { text: 'Reconnecting…', dot: 'animate-breathe bg-warning' },
+}
 
 /**
  * The signed-in user's avatar and account menu — the same two actions
@@ -13,7 +19,7 @@ import { useSocketStore } from '@/lib/socket'
 const ProfileMenu = () => {
   const { user } = useUser()
   const { openUserProfile, signOut } = useClerk()
-  const { isConnected } = useSocketStore()
+  const connection = connectionLabels[useConnectionStatus()]
   const [open, setOpen] = useState(false)
 
   const name = user?.fullName || user?.username || 'You'
@@ -32,7 +38,9 @@ const ProfileMenu = () => {
         aria-haspopup="menu"
         aria-expanded={open}
         onClick={() => setOpen((current) => !current)}
-        className="flex rounded-full transition-opacity duration-150 hover:opacity-85"
+        // Padding (offset by a negative margin) grows the hit area to 38px,
+        // 44px on touch, without moving the 30px avatar.
+        className="-m-1 flex rounded-full p-1 transition-opacity duration-150 hover:opacity-85 pointer-coarse:-m-1.75 pointer-coarse:p-1.75"
       >
         <Avatar user={avatarUser} size={30} />
       </button>
@@ -47,10 +55,8 @@ const ProfileMenu = () => {
             </div>
           </div>
           <p className="mt-3 flex items-center gap-1.5 text-meta text-fg-3">
-            <span
-              className={`size-1.5 rounded-full ${isConnected ? 'bg-success' : 'animate-breathe bg-warning'}`}
-            />
-            {isConnected ? 'Connected' : 'Connecting…'}
+            <span className={`size-1.5 rounded-full ${connection.dot}`} />
+            {connection.text}
           </p>
         </MenuLabel>
         <MenuSeparator />
